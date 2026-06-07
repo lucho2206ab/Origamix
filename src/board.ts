@@ -79,79 +79,56 @@ export function isColComplete(board: (BoardCell | null)[][], col: number): boole
 
 // Simple gravity: after clearing rows, shift halves toward center depending on zone.
 export function applyGravity(board: (BoardCell | null)[][]) {
-  // TOP arm (rows 0-6, cols 7-12) fall downward toward center
-  for (let c = 7; c <= 12; c++) {
-    for (let r = 0; r <= 6; r++) {
-      const cell = board[r][c];
-      if (!cell) continue;
-      const below = board[r + 1] ? board[r + 1][c] : null;
-      if (!below) continue;
-      if (cell.TL.filled && !below.TL.filled) {
-        below.TL = { ...cell.TL };
-        cell.TL = { filled: false, color: '#1e1e1e', isPenalty: false };
-      }
-      if (cell.BR.filled && !below.BR.filled) {
-        below.BR = { ...cell.BR };
-        cell.BR = { filled: false, color: '#1e1e1e', isPenalty: false };
-      }
-    }
-  }
+  const empty = (): HalfCell => ({ filled: false, color: '#1e1e1e', isPenalty: false });
 
-  // BOTTOM arm (rows 13-19, cols 7-12) move upward toward center
+  // TOP arm: stack at row 0, gravity pulls UP
   for (let c = 7; c <= 12; c++) {
-    for (let r = 13; r <= 18; r++) {
+    for (let r = 1; r <= 6; r++) {
       const cell = board[r][c];
       if (!cell) continue;
-      const above = board[r - 1] ? board[r - 1][c] : null;
+      const above = board[r - 1]?.[c];
       if (!above) continue;
-      if (cell.TL.filled && !above.TL.filled) {
-        above.TL = { ...cell.TL };
-        cell.TL = { filled: false, color: '#1e1e1e', isPenalty: false };
-      }
-      if (cell.BR.filled && !above.BR.filled) {
-        above.BR = { ...cell.BR };
-        cell.BR = { filled: false, color: '#1e1e1e', isPenalty: false };
-      }
+      if (cell.TL.filled && !above.TL.filled) { above.TL = { ...cell.TL }; cell.TL = empty(); }
+      if (cell.BR.filled && !above.BR.filled) { above.BR = { ...cell.BR }; cell.BR = empty(); }
     }
   }
 
-  // LEFT arm (cols 0-6, rows 7-12) slide right toward center
-  for (let r = 7; r <= 12; r++) {
-    for (let c = 6; c >= 0; c--) {
+  // BOTTOM arm: stack at row 19, gravity pulls DOWN
+  for (let c = 7; c <= 12; c++) {
+    for (let r = 18; r >= 13; r--) {
       const cell = board[r][c];
       if (!cell) continue;
-      const right = board[r][c + 1];
-      if (!right) continue;
-      if (cell.TL.filled && !right.TL.filled) {
-        right.TL = { ...cell.TL };
-        cell.TL = { filled: false, color: '#1e1e1e', isPenalty: false };
-      }
-      if (cell.BR.filled && !right.BR.filled) {
-        right.BR = { ...cell.BR };
-        cell.BR = { filled: false, color: '#1e1e1e', isPenalty: false };
-      }
+      const below = board[r + 1]?.[c];
+      if (!below) continue;
+      if (cell.TL.filled && !below.TL.filled) { below.TL = { ...cell.TL }; cell.TL = empty(); }
+      if (cell.BR.filled && !below.BR.filled) { below.BR = { ...cell.BR }; cell.BR = empty(); }
     }
   }
 
-  // RIGHT arm (cols 13-19, rows 7-12) slide left toward center
+  // LEFT arm: stack at col 0, gravity pulls LEFT
   for (let r = 7; r <= 12; r++) {
-    for (let c = 13; c <= 18; c++) {
+    for (let c = 1; c <= 6; c++) {
       const cell = board[r][c];
       if (!cell) continue;
-      const left = board[r][c - 1];
+      const left = board[r]?.[c - 1];
       if (!left) continue;
-      if (cell.TL.filled && !left.TL.filled) {
-        left.TL = { ...cell.TL };
-        cell.TL = { filled: false, color: '#1e1e1e', isPenalty: false };
-      }
-      if (cell.BR.filled && !left.BR.filled) {
-        left.BR = { ...cell.BR };
-        cell.BR = { filled: false, color: '#1e1e1e', isPenalty: false };
-      }
+      if (cell.TL.filled && !left.TL.filled) { left.TL = { ...cell.TL }; cell.TL = empty(); }
+      if (cell.BR.filled && !left.BR.filled) { left.BR = { ...cell.BR }; cell.BR = empty(); }
+    }
+  }
+
+  // RIGHT arm: stack at col 19, gravity pulls RIGHT
+  for (let r = 7; r <= 12; r++) {
+    for (let c = 18; c >= 13; c--) {
+      const cell = board[r][c];
+      if (!cell) continue;
+      const right = board[r]?.[c + 1];
+      if (!right) continue;
+      if (cell.TL.filled && !right.TL.filled) { right.TL = { ...cell.TL }; cell.TL = empty(); }
+      if (cell.BR.filled && !right.BR.filled) { right.BR = { ...cell.BR }; cell.BR = empty(); }
     }
   }
 }
-
 export function canMoveToward(piece: Piece, board: (BoardCell | null)[][], direction: 'top' | 'bottom' | 'left' | 'right'): boolean {
   let dr = 0, dc = 0;
   switch (direction) {
