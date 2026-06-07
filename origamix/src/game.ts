@@ -1,5 +1,5 @@
 import type { GameState, Piece, TriangleRef, BoardCell } from "./types.ts";
-import { createBoard, getZone, getCell, setHalfCell, isRowComplete, isColComplete, applyGravity } from "./board";
+import { createBoard, getZone, getCell, setHalfCell, isRowComplete, isColComplete, applyGravity, canMoveToward } from "./board";
 import { selectPieceForLevel, computeRotations } from "./piece";
 import { render } from "./renderer";
 import { speedForLevel, penaltyIntervalForLevel } from "./score";
@@ -44,9 +44,7 @@ function lockPiece(piece: Piece) {
     if (t.slot === 'TL') cell.TL = half;
     else cell.BR = half;
   }
-  // gravity and clears
-  applyGravity(state.board);
-  // check rows and columns
+  // check rows and columns for clears BEFORE applying gravity
   let cleared = 0;
   for (let r = 0; r < state.board.length; r++) {
     if (isRowComplete(state.board, r)) {
@@ -70,6 +68,8 @@ function lockPiece(piece: Piece) {
       cleared++;
     }
   }
+  // THEN apply gravity after clears
+  applyGravity(state.board);
   if (cleared > 0) {
     state.linesCleared += cleared;
     state.score += cleared * 100;
@@ -169,25 +169,15 @@ export function gameLoop(timestamp: number) {
     p.moveAccum += speed * delta;
     while (p.moveAccum >= 1) {
       p.moveAccum -= 1;
-      // move one step toward wall
-      let dr = 0, dc = 0;
-      switch (p.wall) {
-        case 'top': dr = -1; break;
-        case 'bottom': dr = 1; break;
-        case 'left': dc = -1; break;
-        case 'right': dc = 1; break;
-      }
-      // check collision per triangle
-      let blocked = false;
-      for (const t of p.triangles) {
-        const nr = p.anchorRow + t.dRow + dr;
-        const nc = p.anchorCol + t.dCol + dc;
-        const cell = getCell(state.board, nr, nc);
-        if (!cell) { blocked = true; break; }
-        const half = t.slot === 'TL' ? cell.TL : cell.BR;
-        if (half.filled) { blocked = true; break; }
-      }
-      if (!blocked) {
+      // move one step toward wall using consistent collision check
+      if (canMoveToward(p, state.board, p.wall as any)) {
+        let dr = 0, dc = 0;
+        switch (p.wall) {
+          case 'top': dr = -1; break;
+          case 'bottom': dr = 1; break;
+          case 'left': dc = -1; break;
+          case 'right': dc = 1; break;
+        }
         p.anchorRow += dr;
         p.anchorCol += dc;
       } else {

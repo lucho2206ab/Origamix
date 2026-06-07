@@ -33,18 +33,23 @@ function boundingBox(tris: TriangleRef[]) {
 export function rotateCW(tris: TriangleRef[]): TriangleRef[] {
   const bb = boundingBox(tris);
   const H = bb.height;
-  // apply formula
-  const rotated = tris.map(t => {
+  // apply formula, tracking original positions
+  const rotated = tris.map((t, idx) => {
     const newRow = t.dCol;
     const newCol = (H - 1) - t.dRow;
-    return { dRow: newRow, dCol: newCol, slot: t.slot } as TriangleRef;
+    return { dRow: newRow, dCol: newCol, slot: t.slot, origIdx: idx } as any;
   });
   // normalize so min coords start at 0
   const nbb = boundingBox(rotated);
-  const normalized = rotated.map(t => ({ dRow: t.dRow - nbb.minR, dCol: t.dCol - nbb.minC, slot: t.slot }));
+  const normalized = rotated.map(t => ({
+    dRow: t.dRow - nbb.minR,
+    dCol: t.dCol - nbb.minC,
+    slot: t.slot,
+    origIdx: t.origIdx
+  }));
   // flip slot if parity changed between old and new positions
-  return normalized.map((t, i) => {
-    const orig = tris[i];
+  return normalized.map(t => {
+    const orig = tris[t.origIdx];
     const origParity = (orig.dRow + orig.dCol) & 1;
     const newParity = (t.dRow + t.dCol) & 1;
     const slot = (origParity !== newParity) ? (orig.slot === 'TL' ? 'BR' : 'TL') : orig.slot;

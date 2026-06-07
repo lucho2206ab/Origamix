@@ -81,7 +81,7 @@ export function isColComplete(board: (BoardCell | null)[][], col: number): boole
 export function applyGravity(board: (BoardCell | null)[][]) {
   // TOP arm (rows 0-6, cols 7-12) fall downward toward center
   for (let c = 7; c <= 12; c++) {
-    for (let r = 6; r >= 0; r--) {
+    for (let r = 0; r <= 6; r++) {
       const cell = board[r][c];
       if (!cell) continue;
       const below = board[r + 1] ? board[r + 1][c] : null;
