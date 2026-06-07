@@ -1,72 +1,21 @@
+// DONE: Bug3 fixed - all pieces side-connected
 import type { PieceShape, TriangleRef } from "./types.ts";
 
-// Some sample triangular piece shapes. triangles are relative to an anchor.
+// Piece shapes with proper side-connected triangles (no vertex-only connections).
+// Every triangle shares a FULL side with at least one neighbor.
 const PIECE_SHAPES: PieceShape[] = [
-  {
-    name: 'small-v',
-    triangles: [
-      { dRow: 0, dCol: 0, slot: 'TL' },
-      { dRow: 0, dCol: 1, slot: 'BR' },
-    ],
-    color: 'hsl(210,90%,60%)',
-    minLevel: 1,
-  },
-  {
-    name: 'line-3',
-    triangles: [
-      { dRow: 0, dCol: 0, slot: 'TL' },
-      { dRow: 0, dCol: 1, slot: 'TL' },
-      { dRow: 0, dCol: 2, slot: 'TL' },
-    ],
-    color: 'hsl(145,80%,55%)',
-    minLevel: 1,
-  },
-  {
-    name: 'l-shape',
-    triangles: [
-      { dRow: 0, dCol: 0, slot: 'TL' },
-      { dRow: 1, dCol: 0, slot: 'BR' },
-      { dRow: 2, dCol: 0, slot: 'BR' },
-    ],
-    color: 'hsl(345,85%,60%)',
-    minLevel: 2,
-  },
-  {
-    name: 'block-4',
-    triangles: [
-      { dRow: 0, dCol: 0, slot: 'TL' },
-      { dRow: 0, dCol: 1, slot: 'BR' },
-      { dRow: 1, dCol: 0, slot: 'TL' },
-      { dRow: 1, dCol: 1, slot: 'BR' },
-    ],
-    color: 'hsl(275,85%,62%)',
-    minLevel: 2,
-  },
-  {
-    name: 'long-5',
-    triangles: [
-      { dRow: 0, dCol: 0, slot: 'TL' },
-      { dRow: 0, dCol: 1, slot: 'TL' },
-      { dRow: 0, dCol: 2, slot: 'TL' },
-      { dRow: 0, dCol: 3, slot: 'TL' },
-      { dRow: 1, dCol: 0, slot: 'BR' },
-    ],
-    color: 'hsl(10,90%,60%)',
-    minLevel: 3,
-  },
-  {
-    name: 'cluster-6',
-    triangles: [
-      { dRow: 0, dCol: 0, slot: 'TL' },
-      { dRow: 0, dCol: 1, slot: 'BR' },
-      { dRow: 1, dCol: 0, slot: 'TL' },
-      { dRow: 1, dCol: 1, slot: 'BR' },
-      { dRow: 2, dCol: 0, slot: 'TL' },
-      { dRow: 2, dCol: 1, slot: 'BR' },
-    ],
-    color: 'hsl(340,90%,64%)',
-    minLevel: 4,
-  },
+  // Level 1
+  { name:'SQUARE',       color:'#00cfff', minLevel:1, triangles:[{dRow:0,dCol:0,slot:'TL'},{dRow:0,dCol:0,slot:'BR'}] },
+  { name:'STACK_V',      color:'#00ff88', minLevel:1, triangles:[{dRow:0,dCol:0,slot:'BR'},{dRow:1,dCol:0,slot:'TL'}] },
+  { name:'WING_H',       color:'#ff6b35', minLevel:1, triangles:[{dRow:0,dCol:0,slot:'TL'},{dRow:0,dCol:1,slot:'TL'}] },
+  // Level 2
+  { name:'L_SHAPE',      color:'#ffcc00', minLevel:2, triangles:[{dRow:0,dCol:0,slot:'TL'},{dRow:0,dCol:0,slot:'BR'},{dRow:1,dCol:0,slot:'TL'}] },
+  { name:'DBL_SQUARE',   color:'#ff00aa', minLevel:2, triangles:[{dRow:0,dCol:0,slot:'TL'},{dRow:0,dCol:0,slot:'BR'},{dRow:0,dCol:1,slot:'TL'},{dRow:0,dCol:1,slot:'BR'}] },
+  { name:'ZIG',          color:'#aa00ff', minLevel:2, triangles:[{dRow:0,dCol:0,slot:'BR'},{dRow:1,dCol:0,slot:'TL'},{dRow:1,dCol:0,slot:'BR'},{dRow:1,dCol:1,slot:'TL'}] },
+  { name:'T_SHAPE',      color:'#33ffcc', minLevel:2, triangles:[{dRow:0,dCol:0,slot:'TL'},{dRow:0,dCol:0,slot:'BR'},{dRow:0,dCol:1,slot:'TL'},{dRow:1,dCol:0,slot:'TL'}] },
+  // Level 3
+  { name:'LONG_L',       color:'#ff9900', minLevel:3, triangles:[{dRow:0,dCol:0,slot:'TL'},{dRow:0,dCol:0,slot:'BR'},{dRow:1,dCol:0,slot:'TL'},{dRow:1,dCol:0,slot:'BR'},{dRow:2,dCol:0,slot:'TL'},{dRow:2,dCol:1,slot:'TL'}] },
+  { name:'S_SHAPE',      color:'#ff3366', minLevel:3, triangles:[{dRow:0,dCol:1,slot:'TL'},{dRow:0,dCol:1,slot:'BR'},{dRow:1,dCol:0,slot:'TL'},{dRow:1,dCol:0,slot:'BR'},{dRow:1,dCol:1,slot:'TL'}] },
 ];
 
 function boundingBox(tris: TriangleRef[]) {

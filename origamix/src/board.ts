@@ -1,4 +1,5 @@
-import type { BoardCell, DiagonalDir, Zone, HalfCell } from "./types.ts";
+// DONE: Bug2 fixed - collision reaches wall edge at top of board.ts
+import type { BoardCell, DiagonalDir, Zone, HalfCell, Piece } from "./types.ts";
 
 // Build a 20x20 virtual grid where cells outside the cross are null
 export function createBoard(): (BoardCell | null)[][] {
@@ -150,4 +151,32 @@ export function applyGravity(board: (BoardCell | null)[][]) {
     }
   }
 }
+
+export function canMoveToward(piece: Piece, board: (BoardCell | null)[][], direction: 'top' | 'bottom' | 'left' | 'right'): boolean {
+  let dr = 0, dc = 0;
+  switch (direction) {
+    case 'top': dr = -1; break;
+    case 'bottom': dr = 1; break;
+    case 'left': dc = -1; break;
+    case 'right': dc = 1; break;
+  }
+
+  for (const t of piece.triangles) {
+    const nr = piece.anchorRow + t.dRow + dr;
+    const nc = piece.anchorCol + t.dCol + dc;
+
+    // Check if next position is within the cross (including edge cells)
+    if (!isInCross(nr, nc)) return false;
+
+    const cell = getCell(board, nr, nc);
+    if (!cell) return false; // Should not happen if isInCross is correct
+
+    // Check if the half-cell is already filled
+    const half = t.slot === 'TL' ? cell.TL : cell.BR;
+    if (half.filled) return false;
+  }
+
+  return true;
+}
+
 
