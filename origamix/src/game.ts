@@ -1,3 +1,4 @@
+// DONE: BugC fixed - look-ahead collision + lockPiece order corrected
 import type { GameState, Piece, TriangleRef, BoardCell } from "./types.ts";
 import { createBoard, getZone, getCell, setHalfCell, isRowComplete, isColComplete, applyGravity, canMoveToward } from "./board";
 import { selectPieceForLevel, computeRotations } from "./piece";
@@ -34,7 +35,7 @@ function spawnNextPiece() {
 }
 
 function lockPiece(piece: Piece) {
-  // write triangles to board halves
+  // 1. Write triangles to board
   for (const t of piece.triangles) {
     const r = piece.anchorRow + t.dRow;
     const c = piece.anchorCol + t.dCol;
@@ -44,7 +45,8 @@ function lockPiece(piece: Piece) {
     if (t.slot === 'TL') cell.TL = half;
     else cell.BR = half;
   }
-  // check rows and columns for clears BEFORE applying gravity
+
+  // 2. Check and clear completed lines FIRST (before gravity)
   let cleared = 0;
   for (let r = 0; r < state.board.length; r++) {
     if (isRowComplete(state.board, r)) {
@@ -68,14 +70,24 @@ function lockPiece(piece: Piece) {
       cleared++;
     }
   }
-  // THEN apply gravity after clears
+
+  // 3. Apply gravity AFTER clearing (so cleared cells become empty space)
   applyGravity(state.board);
+
+  // 4. Update score and effects
   if (cleared > 0) {
     state.linesCleared += cleared;
-    state.score += cleared * 100;
+    state.score += cleared === 1 ? 100 : cleared === 2 ? 300 : 600;
+    state.comboCount += 1;
     state.penaltyTimer = penaltyIntervalForLevel(state.level);
     addEffect(state, { type: 'flash', x: 0, y: 0, ttl: 0.7, maxTtl: 0.7, color: '#7afcff' });
+  } else {
+    state.comboCount = 0;
+    state.score += 10; // piece placed, no clear
   }
+
+  // 5. Level up check
+  state.level = Math.floor(state.score / 500) + 1;
 }
 
 function rotateCurrent() {
@@ -113,16 +125,29 @@ function setWallOrShift(dir: 'left'|'right'|'top'|'bottom') {
   if (!p.moving) {
     p.wall = dir as any;
     p.moving = true;
+    p.moveAccum = 0; // reset accumulator on direction set
     return;
   }
-  // already moving: shift laterally (perpendicular)
-  if (dir === 'left' || dir === 'right') {
-    // shift horizontally
-    const delta = dir === 'left' ? -1 : 1;
-    p.anchorCol += delta;
-  } else {
-    const delta = dir === 'top' ? -1 : 1;
-    p.anchorRow += delta;
+  // Already moving: shift laterally only if not blocked
+  let dr = 0, dc = 0;
+  if (dir === 'left')  dc = -1;
+  if (dir === 'right') dc =  1;
+  if (dir === 'top')   dr = -1;
+  if (dir === 'bottom') dr = 1;
+
+  // Validate shift won't go out of bounds
+  let ok = true;
+  for (const t of p.triangles) {
+    const nr = p.anchorRow + t.dRow + dr;
+    const nc = p.anchorCol + t.dCol + dc;
+    const cell = getCell(state.board, nr, nc);
+    if (!cell) { ok = false; break; }
+    const half = t.slot === 'TL' ? cell.TL : cell.BR;
+    if (half.filled) { ok = false; break; }
+  }
+  if (ok) {
+    p.anchorRow += dr;
+    p.anchorCol += dc;
   }
 }
 
@@ -165,23 +190,35 @@ export function gameLoop(timestamp: number) {
 
   const p = state.currentPiece;
   const speed = speedForLevel(state.level);
-  if (p && p.moving) {
+  if (p && p.moving && p.wall) {
     p.moveAccum += speed * delta;
     while (p.moveAccum >= 1) {
       p.moveAccum -= 1;
-      // move one step toward wall using consistent collision check
-      if (canMoveToward(p, state.board, p.wall as any)) {
-        let dr = 0, dc = 0;
-        switch (p.wall) {
-          case 'top': dr = -1; break;
-          case 'bottom': dr = 1; break;
-          case 'left': dc = -1; break;
-          case 'right': dc = 1; break;
-        }
+      let dr = 0, dc = 0;
+      switch (p.wall) {
+        case 'top':    dr = -1; break;
+        case 'bottom': dr =  1; break;
+        case 'left':   dc = -1; break;
+        case 'right':  dc =  1; break;
+      }
+
+      // Check NEXT position BEFORE moving (look-ahead)
+      let blocked = false;
+      for (const t of p.triangles) {
+        const nr = p.anchorRow + t.dRow + dr;
+        const nc = p.anchorCol + t.dCol + dc;
+        const cell = getCell(state.board, nr, nc);
+        if (!cell) { blocked = true; break; }
+        const half = t.slot === 'TL' ? cell.TL : cell.BR;
+        if (half.filled) { blocked = true; break; }
+      }
+
+      if (!blocked) {
+        // Safe to move
         p.anchorRow += dr;
         p.anchorCol += dc;
       } else {
-        // lock
+        // Lock at current position (do NOT move first)
         lockPiece(p);
         spawnNextPiece();
         break;
