@@ -59,8 +59,6 @@ export interface GameState {
   score: number;
   level: number;
   linesCleared: number;
-  penaltyCount: number;
-  penaltyTimer: number;
   comboCount: number;
   effects: Effect[];
   status: 'playing' | 'paused' | 'gameover';

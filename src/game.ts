@@ -1,48 +1,77 @@
-// DONE: BugC fixed - look-ahead collision + lockPiece order corrected
-import type { GameState, Piece, TriangleRef, BoardCell } from "./types.ts";
-import { createBoard, getZone, getCell, setHalfCell, isRowComplete, isColComplete, applyGravity, canMoveToward } from "./board";
+// DONE: penalty system removed, piece rendering uses internal diagonal
+import type { GameState, Piece } from "./types.ts";
+import { createBoard, getZone, getCell, isRowComplete, isColComplete, applyGravity } from "./board";
 import { selectPieceForLevel, computeRotations } from "./piece";
 import { render } from "./renderer";
-import { speedForLevel, penaltyIntervalForLevel } from "./score";
+import { speedForLevel } from "./score";
 import { initInput } from "./input";
 import { addEffect, updateEffects } from "./effects";
 
 let state: GameState;
 
-function makePieceFromShape(shape: { triangles: TriangleRef[]; color: string } ) : Piece {
-  const tris = shape.triangles.map(t => ({ ...t }));
-  return {
-    shape: { ...shape, triangles: shape.triangles },
-    rotation: 0,
-    triangles: tris,
-    anchorRow: 7,
-    anchorCol: 9,
-    wall: null,
-    moving: false,
-    moveAccum: 0,
-  } as Piece;
+function boardSlot(slot: 'TL' | 'BR', parityFlip: boolean): 'TL' | 'BR' {
+  return parityFlip ? (slot === 'TL' ? 'BR' : 'TL') : slot;
 }
 
 function spawnNextPiece() {
+  if (state.status !== 'playing') return;
   const shape = selectPieceForLevel(state.level);
-  const piece = makePieceFromShape(shape);
-  // precompute rotations
   const rotations = computeRotations(shape.triangles);
-  piece.rotations = rotations;
-  piece.triangles = rotations[0];
-  piece.rotation = 0;
-  state.currentPiece = piece;
+
+  // Try spawn positions in CENTER zone (rows 7-12, cols 7-12)
+  // Start at center and spiral outward to find a free spot
+  const spawnCandidates = [
+    { r: 9, c: 9 }, { r: 9, c: 8 }, { r: 9, c: 10 },
+    { r: 8, c: 9 }, { r: 10, c: 9 }, { r: 8, c: 8 },
+    { r: 8, c: 10 }, { r: 10, c: 8 }, { r: 10, c: 10 },
+    { r: 7, c: 9 }, { r: 12, c: 9 }, { r: 9, c: 7 }, { r: 9, c: 12 },
+  ];
+
+  for (const candidate of spawnCandidates) {
+    let fits = true;
+    const pf = (candidate.r + candidate.c) % 2 !== 0;
+    for (const t of rotations[0]) {
+      const r = candidate.r + t.dRow;
+      const c = candidate.c + t.dCol;
+      const cell = getCell(state.board, r, c);
+      if (!cell) { fits = false; break; }
+      const checkSlot = boardSlot(t.slot, pf);
+      const half = checkSlot === 'TL' ? cell.TL : cell.BR;
+      if (half.filled) { fits = false; break; }
+    }
+    if (fits) {
+      const piece: Piece = {
+        shape: { ...shape, triangles: shape.triangles },
+        rotation: 0,
+        triangles: rotations[0].map(t => ({ ...t })),
+        rotations,
+        anchorRow: candidate.r,
+        anchorCol: candidate.c,
+        wall: null,
+        moving: false,
+        moveAccum: 0,
+      } as Piece;
+      state.currentPiece = piece;
+      return;
+    }
+  }
+
+  // No valid spawn position found → game over
+  state.status = 'gameover';
+  state.currentPiece = null;
 }
 
 function lockPiece(piece: Piece) {
-  // 1. Write triangles to board
+  // 1. Write triangles to board (adjust slot for cell diagonal)
+  const pf = (piece.anchorRow + piece.anchorCol) % 2 !== 0;
   for (const t of piece.triangles) {
     const r = piece.anchorRow + t.dRow;
     const c = piece.anchorCol + t.dCol;
     const cell = getCell(state.board, r, c);
     if (!cell) continue;
+    const writeSlot = boardSlot(t.slot, pf);
     const half = { filled: true, color: piece.shape.color, isPenalty: false };
-    if (t.slot === 'TL') cell.TL = half;
+    if (writeSlot === 'TL') cell.TL = half;
     else cell.BR = half;
   }
 
@@ -74,12 +103,21 @@ function lockPiece(piece: Piece) {
   // 3. Apply gravity AFTER clearing (so cleared cells become empty space)
   applyGravity(state.board);
 
+  // 3b. Check if piece overflowed into CENTER → game over
+  for (const t of piece.triangles) {
+    const r = piece.anchorRow + t.dRow;
+    const c = piece.anchorCol + t.dCol;
+    if (getZone(r, c) === 'CENTER') {
+      state.status = 'gameover';
+      break;
+    }
+  }
+
   // 4. Update score and effects
   if (cleared > 0) {
     state.linesCleared += cleared;
     state.score += cleared === 1 ? 100 : cleared === 2 ? 300 : 600;
     state.comboCount += 1;
-    state.penaltyTimer = penaltyIntervalForLevel(state.level);
     addEffect(state, { type: 'flash', x: 0, y: 0, ttl: 0.7, maxTtl: 0.7, color: '#7afcff' });
   } else {
     state.comboCount = 0;
@@ -92,7 +130,7 @@ function lockPiece(piece: Piece) {
 
 function rotateCurrent() {
   const p = state.currentPiece;
-  if (!p || p.moving) return;
+  if (!p) return;
   const nextRot = ((p.rotation + 1) % 4) as number;
   const candidate = p.rotations ? p.rotations[nextRot] : null;
   if (!candidate) return;
@@ -100,12 +138,14 @@ function rotateCurrent() {
   const kicks = [ {r:0,c:0}, {r:0,c:-1}, {r:0,c:1}, {r:0,c:-2}, {r:0,c:2}, {r:-1,c:0}, {r:1,c:0} ];
   for (const k of kicks) {
     let ok = true;
+    const kickPf = ((p.anchorRow + k.r) + (p.anchorCol + k.c)) % 2 !== 0;
     for (const t of candidate) {
       const nr = p.anchorRow + t.dRow + k.r;
       const nc = p.anchorCol + t.dCol + k.c;
       const cell = getCell(state.board, nr, nc);
       if (!cell) { ok = false; break; }
-      const half = t.slot === 'TL' ? cell.TL : cell.BR;
+      const checkSlot = boardSlot(t.slot, kickPf);
+      const half = checkSlot === 'TL' ? cell.TL : cell.BR;
       if (half.filled) { ok = false; break; }
     }
     if (ok) {
@@ -137,18 +177,24 @@ function setWallOrShift(dir: 'left'|'right'|'top'|'bottom') {
 
   // Validate shift won't go out of bounds
   let ok = true;
+  const shiftPf = ((p.anchorRow + dr) + (p.anchorCol + dc)) % 2 !== 0;
   for (const t of p.triangles) {
     const nr = p.anchorRow + t.dRow + dr;
     const nc = p.anchorCol + t.dCol + dc;
     const cell = getCell(state.board, nr, nc);
     if (!cell) { ok = false; break; }
-    const half = t.slot === 'TL' ? cell.TL : cell.BR;
+    const checkSlot = boardSlot(t.slot, shiftPf);
+    const half = checkSlot === 'TL' ? cell.TL : cell.BR;
     if (half.filled) { ok = false; break; }
   }
   if (ok) {
     p.anchorRow += dr;
     p.anchorCol += dc;
   }
+}
+
+export function getGameState(): GameState {
+  return state;
 }
 
 export function initGame() {
@@ -159,8 +205,6 @@ export function initGame() {
     score: 0,
     level: 1,
     linesCleared: 0,
-    penaltyCount: 0,
-    penaltyTimer: penaltyIntervalForLevel(1),
     comboCount: 0,
     effects: [],
     status: 'playing',
@@ -176,6 +220,23 @@ export function initGame() {
     // add immediate drop steps
     p.moveAccum += Math.max(1, Math.floor(speedForLevel(state.level) * 1.5));
   } });
+}
+
+export function resetGame() {
+  state = {
+    board: createBoard(),
+    currentPiece: null,
+    nextPieces: [],
+    score: 0,
+    level: 1,
+    linesCleared: 0,
+    comboCount: 0,
+    effects: [],
+    status: 'playing',
+    lastTimestamp: 0,
+    canvasShake: { x:0, y:0, frames:0 },
+  };
+  spawnNextPiece();
 }
 
 export function gameLoop(timestamp: number) {
@@ -204,12 +265,14 @@ export function gameLoop(timestamp: number) {
 
       // Check NEXT position BEFORE moving (look-ahead)
       let blocked = false;
+      const movePf = ((p.anchorRow + dr) + (p.anchorCol + dc)) % 2 !== 0;
       for (const t of p.triangles) {
         const nr = p.anchorRow + t.dRow + dr;
         const nc = p.anchorCol + t.dCol + dc;
         const cell = getCell(state.board, nr, nc);
         if (!cell) { blocked = true; break; }
-        const half = t.slot === 'TL' ? cell.TL : cell.BR;
+        const checkSlot = boardSlot(t.slot, movePf);
+        const half = checkSlot === 'TL' ? cell.TL : cell.BR;
         if (half.filled) { blocked = true; break; }
       }
 
@@ -226,13 +289,6 @@ export function gameLoop(timestamp: number) {
     }
   }
 
-  // penalty timer
-  state.penaltyTimer -= delta;
-  if (state.penaltyTimer <= 0) {
-    state.penaltyCount += 1;
-    state.penaltyTimer = penaltyIntervalForLevel(state.level);
-    if (state.penaltyCount >= 5) state.status = 'gameover';
-  }
   // update effects
   updateEffects(state, delta);
 

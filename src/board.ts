@@ -1,4 +1,4 @@
-// DONE: Bug2 fixed - collision reaches wall edge at top of board.ts
+// DONE: applyGravity loop direction fixed - pulls from wall edge inward
 import type { BoardCell, DiagonalDir, Zone, HalfCell, Piece } from "./types.ts";
 
 // Build a 20x20 virtual grid where cells outside the cross are null
@@ -81,51 +81,51 @@ export function isColComplete(board: (BoardCell | null)[][], col: number): boole
 export function applyGravity(board: (BoardCell | null)[][]) {
   const empty = (): HalfCell => ({ filled: false, color: '#1e1e1e', isPenalty: false });
 
-  // TOP arm: stack at row 0, gravity pulls UP
+  // TOP arm: stack AT row 0, pull cells upward
+  // Loop from wall (row 0) toward center (row 6)
   for (let c = 7; c <= 12; c++) {
-    for (let r = 1; r <= 6; r++) {
-      const cell = board[r][c];
-      if (!cell) continue;
-      const above = board[r - 1]?.[c];
-      if (!above) continue;
-      if (cell.TL.filled && !above.TL.filled) { above.TL = { ...cell.TL }; cell.TL = empty(); }
-      if (cell.BR.filled && !above.BR.filled) { above.BR = { ...cell.BR }; cell.BR = empty(); }
-    }
-  }
-
-  // BOTTOM arm: stack at row 19, gravity pulls DOWN
-  for (let c = 7; c <= 12; c++) {
-    for (let r = 18; r >= 13; r--) {
-      const cell = board[r][c];
-      if (!cell) continue;
+    for (let r = 0; r <= 5; r++) {
+      const above = board[r]?.[c];
       const below = board[r + 1]?.[c];
-      if (!below) continue;
-      if (cell.TL.filled && !below.TL.filled) { below.TL = { ...cell.TL }; cell.TL = empty(); }
-      if (cell.BR.filled && !below.BR.filled) { below.BR = { ...cell.BR }; cell.BR = empty(); }
+      if (!above || !below) continue;
+      if (!above.TL.filled && below.TL.filled) { above.TL = { ...below.TL }; below.TL = empty(); }
+      if (!above.BR.filled && below.BR.filled) { above.BR = { ...below.BR }; below.BR = empty(); }
     }
   }
 
-  // LEFT arm: stack at col 0, gravity pulls LEFT
-  for (let r = 7; r <= 12; r++) {
-    for (let c = 1; c <= 6; c++) {
-      const cell = board[r][c];
-      if (!cell) continue;
-      const left = board[r]?.[c - 1];
-      if (!left) continue;
-      if (cell.TL.filled && !left.TL.filled) { left.TL = { ...cell.TL }; cell.TL = empty(); }
-      if (cell.BR.filled && !left.BR.filled) { left.BR = { ...cell.BR }; cell.BR = empty(); }
+  // BOTTOM arm: stack AT row 19, pull cells downward
+  // Loop from wall (row 19) toward center (row 13)
+  for (let c = 7; c <= 12; c++) {
+    for (let r = 19; r >= 14; r--) {
+      const below = board[r]?.[c];
+      const above = board[r - 1]?.[c];
+      if (!below || !above) continue;
+      if (!below.TL.filled && above.TL.filled) { below.TL = { ...above.TL }; above.TL = empty(); }
+      if (!below.BR.filled && above.BR.filled) { below.BR = { ...above.BR }; above.BR = empty(); }
     }
   }
 
-  // RIGHT arm: stack at col 19, gravity pulls RIGHT
+  // LEFT arm: stack AT col 0, pull cells leftward
+  // Loop from wall (col 0) toward center (col 6)
   for (let r = 7; r <= 12; r++) {
-    for (let c = 18; c >= 13; c--) {
-      const cell = board[r][c];
-      if (!cell) continue;
+    for (let c = 0; c <= 5; c++) {
+      const left  = board[r]?.[c];
       const right = board[r]?.[c + 1];
-      if (!right) continue;
-      if (cell.TL.filled && !right.TL.filled) { right.TL = { ...cell.TL }; cell.TL = empty(); }
-      if (cell.BR.filled && !right.BR.filled) { right.BR = { ...cell.BR }; cell.BR = empty(); }
+      if (!left || !right) continue;
+      if (!left.TL.filled && right.TL.filled) { left.TL = { ...right.TL }; right.TL = empty(); }
+      if (!left.BR.filled && right.BR.filled) { left.BR = { ...right.BR }; right.BR = empty(); }
+    }
+  }
+
+  // RIGHT arm: stack AT col 19, pull cells rightward
+  // Loop from wall (col 19) toward center (col 13)
+  for (let r = 7; r <= 12; r++) {
+    for (let c = 19; c >= 14; c--) {
+      const right = board[r]?.[c];
+      const left  = board[r]?.[c - 1];
+      if (!right || !left) continue;
+      if (!right.TL.filled && left.TL.filled) { right.TL = { ...left.TL }; left.TL = empty(); }
+      if (!right.BR.filled && left.BR.filled) { right.BR = { ...left.BR }; left.BR = empty(); }
     }
   }
 }

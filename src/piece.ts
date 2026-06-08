@@ -1,4 +1,4 @@
-// DONE: Bug3 fixed - all pieces side-connected
+// DONE: rotateCW rewritten - no index mapping, slot by diagonal parity
 import type { PieceShape, TriangleRef } from "./types.ts";
 
 // Piece shapes with proper side-connected triangles (no vertex-only connections).
@@ -18,42 +18,34 @@ const PIECE_SHAPES: PieceShape[] = [
   { name:'S_SHAPE',      color:'#ff3366', minLevel:3, triangles:[{dRow:0,dCol:1,slot:'TL'},{dRow:0,dCol:1,slot:'BR'},{dRow:1,dCol:0,slot:'TL'},{dRow:1,dCol:0,slot:'BR'},{dRow:1,dCol:1,slot:'TL'}] },
 ];
 
-function boundingBox(tris: TriangleRef[]) {
-  let minR = Infinity, minC = Infinity, maxR = -Infinity, maxC = -Infinity;
+export function rotateCW(tris: TriangleRef[]): TriangleRef[] {
+  // Step 1: find bounding box
+  let minR = Infinity, minC = Infinity, maxR = -Infinity;
   for (const t of tris) {
     minR = Math.min(minR, t.dRow);
     minC = Math.min(minC, t.dCol);
     maxR = Math.max(maxR, t.dRow);
-    maxC = Math.max(maxC, t.dCol);
   }
-  return { minR, minC, maxR, maxC, height: maxR - minR + 1, width: maxC - minC + 1 };
-}
+  const H = maxR - minR + 1;
 
-// Accurate rotation per CLAUDE.md: newRow = dCol; newCol = (H-1)-dRow
-export function rotateCW(tris: TriangleRef[]): TriangleRef[] {
-  const bb = boundingBox(tris);
-  const H = bb.height;
-  // apply formula, tracking original positions
-  const rotated = tris.map((t, idx) => {
-    const newRow = t.dCol;
-    const newCol = (H - 1) - t.dRow;
-    return { dRow: newRow, dCol: newCol, slot: t.slot, origIdx: idx } as any;
-  });
-  // normalize so min coords start at 0
-  const nbb = boundingBox(rotated);
-  const normalized = rotated.map(t => ({
-    dRow: t.dRow - nbb.minR,
-    dCol: t.dCol - nbb.minC,
-    slot: t.slot,
-    origIdx: t.origIdx
-  }));
-  // flip slot if parity changed between old and new positions
-  return normalized.map(t => {
-    const orig = tris[t.origIdx];
-    const origParity = (orig.dRow + orig.dCol) & 1;
-    const newParity = (t.dRow + t.dCol) & 1;
-    const slot = (origParity !== newParity) ? (orig.slot === 'TL' ? 'BR' : 'TL') : orig.slot;
-    return { dRow: t.dRow, dCol: t.dCol, slot };
+  // Step 2: rotate each triangle 90° CW and determine new slot
+  return tris.map(t => {
+    // Normalize input coords
+    const r = t.dRow - minR;
+    const c = t.dCol - minC;
+
+    // Apply 90° CW: newRow = c, newCol = (H-1) - r
+    const newRow = c;
+    const newCol = (H - 1) - r;
+
+    // Determine slot based on diagonal of destination cell
+    const origDiag = (r + c) % 2;
+    const newDiag  = (newRow + newCol) % 2;
+    const slot: 'TL' | 'BR' = (origDiag !== newDiag)
+      ? (t.slot === 'TL' ? 'BR' : 'TL')
+      : t.slot;
+
+    return { dRow: newRow, dCol: newCol, slot };
   });
 }
 

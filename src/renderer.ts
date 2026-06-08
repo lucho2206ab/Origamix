@@ -1,4 +1,4 @@
-import type { GameState, BoardCell, DiagonalDir, TriSlot } from "./types.ts";
+import type { GameState, DiagonalDir, TriSlot } from "./types.ts";
 
 function drawTriangle(
   ctx: CanvasRenderingContext2D,
@@ -97,7 +97,14 @@ export function render(state: GameState) {
     }
   }
 
-  // Draw active piece
+  // CENTER zone border
+  ctx.strokeStyle = 'rgba(200,150,12,0.5)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.strokeRect(boardX + 7 * S, boardY + 7 * S, 6 * S, 6 * S);
+  ctx.setLineDash([]);
+
+  // Draw active piece (using internal diagonal to preserve shape)
   const p = state.currentPiece;
   if (p) {
     ctx.shadowColor = p.shape.color;
@@ -109,7 +116,8 @@ export function render(state: GameState) {
       if (!cell) continue;
       const px = boardX + c * S;
       const py = boardY + r * S;
-      drawTriangle(ctx, px, py, S, cell.diag, t.slot, p.shape.color, 1);
+      const diag = ((t.dRow + t.dCol) % 2 === 0 ? '\\' : '/') as DiagonalDir;
+      drawTriangle(ctx, px, py, S, diag, t.slot, p.shape.color, 1);
     }
     ctx.shadowBlur = 0;
   }
@@ -145,7 +153,8 @@ export function render(state: GameState) {
     for (const eff of state.effects) {
       const a = Math.max(0, eff.ttl / eff.maxTtl);
       if (eff.type === 'particle' && eff.data?.particles) {
-        for (const p of eff.data.particles) {
+        const particles = eff.data.particles as Array<{x:number;y:number;vx:number;vy:number;size:number}>;
+        for (const p of particles) {
           ctx.globalAlpha = Math.max(0, a * 0.9);
           ctx.fillStyle = eff.color || '#ffffff';
           ctx.beginPath();
@@ -155,7 +164,7 @@ export function render(state: GameState) {
         ctx.globalAlpha = 1;
       }
       if (eff.type === 'ripple' && eff.data) {
-        const r = eff.data.radius || 10;
+        const r = (eff.data.radius as number) || 10;
         ctx.beginPath();
         ctx.strokeStyle = eff.color || 'rgba(122,252,255,0.5)';
         ctx.lineWidth = 2;
@@ -174,4 +183,51 @@ export function render(state: GameState) {
       }
     }
   }
+
+  // Game over overlay
+  if (state.status === 'gameover') {
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#c8960c';
+    ctx.font = 'bold 48px Courier New';
+    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = '24px Courier New';
+    ctx.fillText(`Score: ${state.score}`, canvas.width / 2, canvas.height / 2 + 30);
+    ctx.textAlign = 'left';
+  }
+}
+
+export function renderTitleScreen(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, playerName: string) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#c8960c';
+  ctx.font = 'bold 56px Courier New';
+  ctx.fillText('ORIGAMIX', canvas.width / 2, 200);
+
+  ctx.fillStyle = '#7afcff';
+  ctx.font = '20px Courier New';
+  ctx.fillText('Triangular Grid Puzzle', canvas.width / 2, 250);
+
+  ctx.fillStyle = '#e0e0e0';
+  ctx.font = '16px Courier New';
+  ctx.fillText('Controles:', canvas.width / 2, 320);
+  ctx.fillText('← → ↑ ↓  — Dirigir pieza', canvas.width / 2, 348);
+  ctx.fillText('Espacio  — Rotar', canvas.width / 2, 372);
+  ctx.fillText('S        — Caída rápida', canvas.width / 2, 396);
+
+  if (playerName) {
+    ctx.fillStyle = '#00ff88';
+    ctx.font = '18px Courier New';
+    ctx.fillText(`Jugador: ${playerName}`, canvas.width / 2, 450);
+  }
+
+  ctx.fillStyle = 'rgba(200,150,12,0.6)';
+  ctx.font = 'bold 22px Courier New';
+  ctx.fillText('Presiona ▶ START para jugar', canvas.width / 2, 510);
+  ctx.textAlign = 'left';
 }

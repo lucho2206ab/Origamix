@@ -5,7 +5,8 @@ export function addEffect(state: GameState, e: Effect) {
   if (e.type === 'particle') {
     e.data = e.data || {};
     const particles = [] as Array<{x:number,y:number,vx:number,vy:number,size:number}>;
-    for (let i=0;i< (e.data?.count as number || 12); i++) {
+    const count = (e.data?.count as number) || 12;
+    for (let i=0; i<count; i++) {
       const ang = Math.random()*Math.PI*2;
       const speed = 30 + Math.random()*80;
       particles.push({ x: e.x, y: e.y, vx: Math.cos(ang)*speed, vy: Math.sin(ang)*speed, size: 2 + Math.random()*3 });
@@ -27,7 +28,8 @@ export function updateEffects(state: GameState, delta: number) {
     eff.ttl -= delta;
     // update particle positions
     if (eff.type === 'particle' && eff.data?.particles) {
-      for (const p of eff.data.particles) {
+      const ps = eff.data.particles as Array<{x:number;y:number;vx:number;vy:number;size:number}>;
+      for (const p of ps) {
         p.x += p.vx * delta;
         p.y += p.vy * delta;
         p.vx *= 0.98;
@@ -36,7 +38,8 @@ export function updateEffects(state: GameState, delta: number) {
       }
     }
     if (eff.type === 'ripple' && eff.data) {
-      eff.data.radius += (eff.data.max / Math.max(0.01, eff.maxTtl)) * (delta * eff.maxTtl);
+      const d = eff.data as { radius: number; max: number };
+      d.radius += (d.max / Math.max(0.01, eff.maxTtl)) * (delta * eff.maxTtl);
     }
     if (eff.ttl <= 0) state.effects.splice(i, 1);
   }

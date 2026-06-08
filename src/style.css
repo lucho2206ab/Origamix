@@ -314,3 +314,128 @@ code {
     border-right-color: var(--border);
   }
 }
+
+#ui-bar {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0 8px;
+  flex-wrap: wrap;
+}
+
+#player-name {
+  background: #1a1a2e;
+  border: 1px solid rgba(122, 252, 255, 0.25);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: 14px 'Courier New', monospace;
+  color: #e0e0e0;
+  outline: none;
+  width: 140px;
+  transition: border-color 0.2s;
+}
+#player-name:focus {
+  border-color: #7afcff;
+  box-shadow: 0 0 12px rgba(122, 252, 255, 0.15);
+}
+
+#name-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#name-ok {
+  background: transparent;
+  color: #7afcff;
+  border: 1px solid rgba(122, 252, 255, 0.4);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: bold 14px 'Courier New', monospace;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.1s, border-color 0.2s;
+}
+#name-ok:hover {
+  border-color: #7afcff;
+  box-shadow: 0 0 16px rgba(122, 252, 255, 0.3);
+  transform: scale(1.03);
+}
+#name-ok:active {
+  transform: scale(0.97);
+}
+
+#name-confirmed {
+  color: #00ff88;
+  font: bold 16px 'Courier New', monospace;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#name-confirmed.show {
+  opacity: 1;
+}
+
+#start {
+  background: #00cc66;
+  color: #0d0d0d;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font: bold 14px 'Courier New', monospace;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.1s, opacity 0.2s;
+}
+#start:hover:not(:disabled) {
+  box-shadow: 0 0 20px rgba(0, 204, 102, 0.5);
+  transform: scale(1.03);
+}
+#start:active:not(:disabled) {
+  transform: scale(0.97);
+}
+#start:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#reset {
+  background: #c8960c;
+  color: #0d0d0d;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font: bold 14px 'Courier New', monospace;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.1s;
+}
+#reset:hover {
+  box-shadow: 0 0 20px rgba(200, 150, 12, 0.5);
+  transform: scale(1.03);
+}
+#reset:active {
+  transform: scale(0.97);
+}
+
+#scores {
+  margin: 6px 0 10px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  color: #e0e0e0;
+}
+#high-label {
+  font: bold 14px 'Courier New', monospace;
+  color: #c8960c;
+  letter-spacing: 1px;
+}
+#high-score {
+  font: bold 18px 'Courier New', monospace;
+  color: #c8960c;
+  text-shadow: 0 0 12px rgba(200, 150, 12, 0.5);
+}
+
+#player-name-display {
+  font: 14px 'Courier New', monospace;
+  color: #00ff88;
+  display: none;
+}

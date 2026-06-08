@@ -1,5 +1,3 @@
-import type { Piece } from "./types.ts";
-
 export type Handlers = {
   rotate: () => void;
   setWallOrShift: (dir: 'left'|'right'|'top'|'bottom') => void;

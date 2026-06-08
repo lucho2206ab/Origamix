@@ -8,7 +8,21 @@
   </head>
   <body>
     <div id="app">
-      <canvas id="game" width="760" height="560"></canvas>
+      <div id="ui-bar">
+        <div id="name-group">
+          <input id="player-name" type="text" placeholder="Tu nombre" maxlength="20">
+          <button id="name-ok">OK</button>
+          <span id="name-confirmed">✓</span>
+        </div>
+        <span id="player-name-display"></span>
+        <button id="start" disabled>▶ START</button>
+        <button id="reset">↻ New Game</button>
+      </div>
+      <div id="scores">
+        <span id="high-label">🏆 High Score</span>
+        <span id="high-score">--</span>
+      </div>
+      <canvas id="game" width="760" height="650"></canvas>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
