@@ -88,6 +88,24 @@ if (canvas) {
   if (ctx) renderTitleScreen(ctx, canvas, playerName);
 }
 
+function returnToTitle() {
+  gameStarted = false;
+  gameOverHandled = false;
+  const startEl = document.getElementById("start");
+  const nameGroup = document.getElementById("name-group");
+  const nameDisplay = document.getElementById("player-name-display");
+  const resetEl = document.getElementById("reset");
+  if (startEl) startEl.style.display = "";
+  if (nameGroup) nameGroup.style.display = "";
+  if (nameDisplay) nameDisplay.style.display = "none";
+  if (resetEl) resetEl.style.display = "none";
+  const canvas = document.querySelector<HTMLCanvasElement>("#game");
+  if (canvas) {
+    const ctx = canvas.getContext("2d");
+    if (ctx) renderTitleScreen(ctx, canvas, playerName);
+  }
+}
+
 function step(timestamp: number) {
   if (!gameStarted) { requestAnimationFrame(step); return; }
 
@@ -97,6 +115,10 @@ function step(timestamp: number) {
   if (gs.status === "gameover" && !gameOverHandled) {
     gameOverHandled = true;
     saveScore(playerName, gs.score);
+    if (gs.inactivityGameOver) {
+      returnToTitle();
+      return;
+    }
   }
 
   if (gs.status === "playing") gameOverHandled = false;

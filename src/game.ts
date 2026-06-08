@@ -1,5 +1,5 @@
 // DONE: penalty system removed, piece rendering uses internal diagonal
-import type { GameState, Piece } from "./types.ts";
+import type { GameState, Piece, TriangleRef } from "./types.ts";
 import { createBoard, getZone, getCell, isRowComplete, isColComplete, applyGravity } from "./board";
 import { selectPieceForLevel, computeRotations } from "./piece";
 import { render } from "./renderer";
@@ -9,8 +9,14 @@ import { addEffect, updateEffects } from "./effects";
 
 let state: GameState;
 
-function boardSlot(slot: 'TL' | 'BR', parityFlip: boolean): 'TL' | 'BR' {
-  return parityFlip ? (slot === 'TL' ? 'BR' : 'TL') : slot;
+// Maps a piece triangle's slot to the correct board half-cell by comparing
+// the triangle's internal diagonal with the destination board cell's diagonal.
+function boardSlotForTriangle(t: TriangleRef, cellRow: number, cellCol: number): 'TL' | 'BR' {
+  const internalParity = (t.dRow + t.dCol) & 1;
+  const boardParity = (cellRow + cellCol) & 1;
+  return internalParity !== boardParity
+    ? (t.slot === 'TL' ? 'BR' : 'TL')
+    : t.slot;
 }
 
 function spawnNextPiece() {
@@ -29,13 +35,12 @@ function spawnNextPiece() {
 
   for (const candidate of spawnCandidates) {
     let fits = true;
-    const pf = (candidate.r + candidate.c) % 2 !== 0;
     for (const t of rotations[0]) {
       const r = candidate.r + t.dRow;
       const c = candidate.c + t.dCol;
       const cell = getCell(state.board, r, c);
       if (!cell) { fits = false; break; }
-      const checkSlot = boardSlot(t.slot, pf);
+      const checkSlot = boardSlotForTriangle(t, r, c);
       const half = checkSlot === 'TL' ? cell.TL : cell.BR;
       if (half.filled) { fits = false; break; }
     }
@@ -63,13 +68,12 @@ function spawnNextPiece() {
 
 function lockPiece(piece: Piece) {
   // 1. Write triangles to board (adjust slot for cell diagonal)
-  const pf = (piece.anchorRow + piece.anchorCol) % 2 !== 0;
   for (const t of piece.triangles) {
     const r = piece.anchorRow + t.dRow;
     const c = piece.anchorCol + t.dCol;
     const cell = getCell(state.board, r, c);
     if (!cell) continue;
-    const writeSlot = boardSlot(t.slot, pf);
+    const writeSlot = boardSlotForTriangle(t, r, c);
     const half = { filled: true, color: piece.shape.color, isPenalty: false };
     if (writeSlot === 'TL') cell.TL = half;
     else cell.BR = half;
@@ -138,13 +142,12 @@ function rotateCurrent() {
   const kicks = [ {r:0,c:0}, {r:0,c:-1}, {r:0,c:1}, {r:0,c:-2}, {r:0,c:2}, {r:-1,c:0}, {r:1,c:0} ];
   for (const k of kicks) {
     let ok = true;
-    const kickPf = ((p.anchorRow + k.r) + (p.anchorCol + k.c)) % 2 !== 0;
     for (const t of candidate) {
       const nr = p.anchorRow + t.dRow + k.r;
       const nc = p.anchorCol + t.dCol + k.c;
       const cell = getCell(state.board, nr, nc);
       if (!cell) { ok = false; break; }
-      const checkSlot = boardSlot(t.slot, kickPf);
+      const checkSlot = boardSlotForTriangle(t, nr, nc);
       const half = checkSlot === 'TL' ? cell.TL : cell.BR;
       if (half.filled) { ok = false; break; }
     }
@@ -177,13 +180,12 @@ function setWallOrShift(dir: 'left'|'right'|'top'|'bottom') {
 
   // Validate shift won't go out of bounds
   let ok = true;
-  const shiftPf = ((p.anchorRow + dr) + (p.anchorCol + dc)) % 2 !== 0;
   for (const t of p.triangles) {
     const nr = p.anchorRow + t.dRow + dr;
     const nc = p.anchorCol + t.dCol + dc;
     const cell = getCell(state.board, nr, nc);
     if (!cell) { ok = false; break; }
-    const checkSlot = boardSlot(t.slot, shiftPf);
+    const checkSlot = boardSlotForTriangle(t, nr, nc);
     const half = checkSlot === 'TL' ? cell.TL : cell.BR;
     if (half.filled) { ok = false; break; }
   }
@@ -209,6 +211,8 @@ export function initGame() {
     effects: [],
     status: 'playing',
     lastTimestamp: 0,
+    lastInputTime: performance.now(),
+    inactivityGameOver: false,
     canvasShake: { x:0, y:0, frames:0 },
   };
 
@@ -217,8 +221,9 @@ export function initGame() {
   initInput({ rotate: rotateCurrent, setWallOrShift, softDrop: () => {
     const p = state.currentPiece;
     if (!p) return;
-    // add immediate drop steps
     p.moveAccum += Math.max(1, Math.floor(speedForLevel(state.level) * 1.5));
+  }, touchActivity: () => {
+    state.lastInputTime = performance.now();
   } });
 }
 
@@ -234,6 +239,8 @@ export function resetGame() {
     effects: [],
     status: 'playing',
     lastTimestamp: 0,
+    lastInputTime: performance.now(),
+    inactivityGameOver: false,
     canvasShake: { x:0, y:0, frames:0 },
   };
   spawnNextPiece();
@@ -245,6 +252,15 @@ export function gameLoop(timestamp: number) {
   state.lastTimestamp = timestamp;
 
   if (state.status !== 'playing') {
+    render(state);
+    return;
+  }
+
+  // Inactivity timeout: 3 minutes without input
+  if (state.lastInputTime > 0 && performance.now() - state.lastInputTime > 180000) {
+    state.status = 'gameover';
+    state.currentPiece = null;
+    state.inactivityGameOver = true;
     render(state);
     return;
   }
@@ -265,13 +281,12 @@ export function gameLoop(timestamp: number) {
 
       // Check NEXT position BEFORE moving (look-ahead)
       let blocked = false;
-      const movePf = ((p.anchorRow + dr) + (p.anchorCol + dc)) % 2 !== 0;
       for (const t of p.triangles) {
         const nr = p.anchorRow + t.dRow + dr;
         const nc = p.anchorCol + t.dCol + dc;
         const cell = getCell(state.board, nr, nc);
         if (!cell) { blocked = true; break; }
-        const checkSlot = boardSlot(t.slot, movePf);
+        const checkSlot = boardSlotForTriangle(t, nr, nc);
         const half = checkSlot === 'TL' ? cell.TL : cell.BR;
         if (half.filled) { blocked = true; break; }
       }

@@ -146,10 +146,15 @@ export function canMoveToward(piece: Piece, board: (BoardCell | null)[][], direc
     if (!isInCross(nr, nc)) return false;
 
     const cell = getCell(board, nr, nc);
-    if (!cell) return false; // Should not happen if isInCross is correct
+    if (!cell) return false;
 
-    // Check if the half-cell is already filled
-    const half = t.slot === 'TL' ? cell.TL : cell.BR;
+    // Map triangle slot to board half-cell via per-cell diagonal parity
+    const internalParity = (t.dRow + t.dCol) & 1;
+    const boardParity = (nr + nc) & 1;
+    const boardSlot: 'TL' | 'BR' = internalParity !== boardParity
+      ? (t.slot === 'TL' ? 'BR' : 'TL')
+      : t.slot;
+    const half = boardSlot === 'TL' ? cell.TL : cell.BR;
     if (half.filled) return false;
   }
 

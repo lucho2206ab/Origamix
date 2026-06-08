@@ -63,5 +63,7 @@ export interface GameState {
   effects: Effect[];
   status: 'playing' | 'paused' | 'gameover';
   lastTimestamp: number;
+  lastInputTime: number; // performance.now(), 3min inactivity → gameover
+  inactivityGameOver: boolean;
   canvasShake: { x: number; y: number; frames: number };
 }

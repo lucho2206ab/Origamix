@@ -2,6 +2,7 @@ export type Handlers = {
   rotate: () => void;
   setWallOrShift: (dir: 'left'|'right'|'top'|'bottom') => void;
   softDrop: () => void;
+  touchActivity: () => void;
 };
 
 let initialized = false;
@@ -9,6 +10,7 @@ let initialized = false;
 export function initInput(h: Handlers) {
   if (initialized) return;
   window.addEventListener('keydown', (ev) => {
+    h.touchActivity();
     switch (ev.code) {
       case 'Space':
         ev.preventDefault();
