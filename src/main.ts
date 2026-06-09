@@ -145,7 +145,47 @@ function step(timestamp: number) {
 
   if (gs.status === "playing") gameOverHandled = false;
 
-  requestAnimationFrame(step);
+requestAnimationFrame(step);
+
+// ── Touch controls ────────────────────────────────────────────────────
+(function addTouchControls() {
+  const canvas = document.getElementById('game') as HTMLCanvasElement;
+  if (!canvas) return;
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+  const SWIPE_THRESHOLD = 30; // minimum px to count as swipe
+
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    if (absDx < 10 && absDy < 10) {
+      // TAP → rotate
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true }));
+      return;
+    }
+
+    if (absDx > SWIPE_THRESHOLD || absDy > SWIPE_THRESHOLD) {
+      let key: string;
+      if (absDx > absDy) {
+        key = dx > 0 ? 'ArrowRight' : 'ArrowLeft';
+      } else {
+        key = dy > 0 ? 'ArrowDown' : 'ArrowUp';
+      }
+      window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    }
+  }, { passive: false });
+})();
 }
 
 requestAnimationFrame(step);

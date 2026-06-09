@@ -3,8 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <!-- PWA -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+    <meta name="apple-mobile-web-app-title" content="OrigaMix">
+    <meta name="theme-color" content="#0d0d0d">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d0d0d;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      overflow: hidden;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    #ui-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      width: 100%;
+      background: rgba(0,0,0,0.5);
+    }
+    #scores {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 4px 8px;
+      font-size: 13px;
+      color: #e0e0e0;
+    }
+    canvas#game {
+      max-width: 100vw;
+      max-height: calc(100dvh - 80px);
+      width: auto;
+      height: auto;
+      display: block;
+      touch-action: none;
+    }
+    /* Mobile landscape: maximize canvas */
+    @media (max-height: 500px) {
+      #ui-bar { padding: 3px; gap: 4px; font-size: 11px; }
+      canvas#game { max-height: calc(100dvh - 50px); }
+    }
+    /* Prevent text selection on touch */
+    #app { user-select: none; -webkit-user-select: none; }
+  </style>
     <title>origamix</title>
   </head>
   <body>
