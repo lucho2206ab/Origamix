@@ -6,6 +6,10 @@ let playerName = "";
 let gameStarted = false;
 let gameOverHandled = false;
 
+function sanitizeName(name: string): string {
+  return name.replace(/[<>&"']/g, "").trim().slice(0, 20) || "Jugador";
+}
+
 function saveScore(name: string, score: number) {
   const raw = localStorage.getItem("origami_scores");
   const scores: { name: string; score: number; date: string }[] = raw ? JSON.parse(raw) : [];
@@ -35,16 +39,26 @@ if (savedName) {
   if (startBtn) startBtn.disabled = false;
 }
 
+function redrawTitleScreen() {
+  const canvas = document.querySelector<HTMLCanvasElement>("#game");
+  if (canvas) {
+    const ctx = canvas.getContext("2d");
+    if (ctx && !gameStarted) renderTitleScreen(ctx, canvas, playerName);
+  }
+}
+
 // Name OK button
 document.getElementById("name-ok")?.addEventListener("click", () => {
   const input = document.getElementById("player-name") as HTMLInputElement | null;
-  const name = input?.value?.trim();
+  const name = sanitizeName(input?.value ?? "");
   if (!name) return;
   playerName = name;
+  if (input) input.value = name;
   localStorage.setItem("origami_player_name", name);
   document.getElementById("name-confirmed")?.classList.add("show");
   const startBtn = document.getElementById("start") as HTMLButtonElement | null;
   if (startBtn) startBtn.disabled = false;
+  redrawTitleScreen();
 });
 
 // Enter key submits name
@@ -57,10 +71,8 @@ document.getElementById("player-name")?.addEventListener("keydown", (e: Keyboard
 // START button
 document.getElementById("start")?.addEventListener("click", () => {
   if (gameStarted) return;
-  if (!playerName) {
-    const input = document.getElementById("player-name") as HTMLInputElement | null;
-    playerName = input?.value?.trim() || "Jugador";
-  }
+  const input = document.getElementById("player-name") as HTMLInputElement | null;
+  playerName = sanitizeName(input?.value ?? "");
   gameStarted = true;
   const startEl = document.getElementById("start");
   const nameGroup = document.getElementById("name-group");
@@ -99,11 +111,7 @@ function returnToTitle() {
   if (nameGroup) nameGroup.style.display = "";
   if (nameDisplay) nameDisplay.style.display = "none";
   if (resetEl) resetEl.style.display = "none";
-  const canvas = document.querySelector<HTMLCanvasElement>("#game");
-  if (canvas) {
-    const ctx = canvas.getContext("2d");
-    if (ctx) renderTitleScreen(ctx, canvas, playerName);
-  }
+  redrawTitleScreen();
 }
 
 function step(timestamp: number) {

@@ -153,7 +153,7 @@ function rotateCurrent() {
     }
     if (ok) {
       p.triangles = candidate.map(t => ({ ...t }));
-      p.rotation = nextRot as any;
+      p.rotation = nextRot as 0 | 1 | 2 | 3;
       p.anchorRow += k.r;
       p.anchorCol += k.c;
       return;
@@ -166,7 +166,7 @@ function setWallOrShift(dir: 'left'|'right'|'top'|'bottom') {
   const p = state.currentPiece;
   if (!p) return;
   if (!p.moving) {
-    p.wall = dir as any;
+    p.wall = dir;
     p.moving = true;
     p.moveAccum = 0; // reset accumulator on direction set
     return;
