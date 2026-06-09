@@ -82,6 +82,7 @@ document.getElementById("start")?.addEventListener("click", () => {
   if (nameGroup) nameGroup.style.display = "none";
   if (nameDisplay) { nameDisplay.textContent = `Jugador: ${playerName}`; nameDisplay.style.display = ""; }
   if (resetEl) resetEl.style.display = "";
+  fitCanvas();
   initGame();
 });
 
@@ -91,7 +92,19 @@ document.getElementById("reset")?.addEventListener("click", () => {
   gameOverHandled = false;
 });
 
+function fitCanvas() {
+  const canvas = document.querySelector<HTMLCanvasElement>("#game");
+  if (!canvas) return;
+  const availW = window.innerWidth - 32;
+  const availH = window.innerHeight - 130;
+  const scale = Math.min(1, availW / 760, availH / 650);
+  canvas.style.width = `${760 * scale}px`;
+  canvas.style.height = `${650 * scale}px`;
+}
+
 updateScoreDisplay();
+fitCanvas();
+window.addEventListener("resize", fitCanvas);
 
 // Draw initial title screen
 const canvas = document.querySelector<HTMLCanvasElement>("#game");
@@ -111,6 +124,7 @@ function returnToTitle() {
   if (nameGroup) nameGroup.style.display = "";
   if (nameDisplay) nameDisplay.style.display = "none";
   if (resetEl) resetEl.style.display = "none";
+  fitCanvas();
   redrawTitleScreen();
 }
 

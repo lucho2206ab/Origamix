@@ -52,11 +52,11 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
+  height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow-x: hidden;
+  overflow: hidden;
   background: radial-gradient(circle at top, rgba(40, 105, 255, 0.08), transparent 40%),
     #020814;
   color: #7afcff;
@@ -65,21 +65,25 @@ body {
 #app {
   width: min(900px, 100%);
   max-width: 100%;
+  max-height: 100dvh;
   margin: 0 auto;
-  padding: 20px 16px;
+  padding: 12px 16px;
   text-align: center;
   border: 1px solid rgba(122, 252, 255, 0.18);
   background: rgba(1, 5, 20, 0.95);
   box-shadow: 0 0 60px rgba(122, 252, 255, 0.08);
   box-sizing: border-box;
   border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 #app canvas#game {
   display: block;
-  width: min(760px, 100%);
-  height: auto;
-  margin: 0 auto 16px;
+  max-width: 100%;
+  flex-shrink: 0;
+  margin: 0 auto 12px;
   border: 1px solid rgba(122, 252, 255, 0.18);
   background: radial-gradient(circle at center, rgba(122, 252, 255, 0.08), #020814 65%);
   box-shadow: inset 0 0 30px rgba(122, 252, 255, 0.1), 0 0 20px rgba(122, 252, 255, 0.08);
