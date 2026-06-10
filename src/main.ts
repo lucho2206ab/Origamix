@@ -41,6 +41,17 @@ function syncMobileScore() {
   el.textContent = scores.length > 0 ? `${scores[0].score} — ${scores[0].name}` : '--';
 }
 
+function updateMobileScoreOverlay() {
+  if (!gameStarted) return;
+  const gs = getGameState();
+  const p = document.getElementById('mob-score-puntaje');
+  const n = document.getElementById('mob-score-nivel');
+  const l = document.getElementById('mob-score-lineas');
+  if (p) p.textContent = `Puntaje: ${gs.score}`;
+  if (n) n.textContent = `Nivel: ${gs.level}`;
+  if (l) l.textContent = `Líneas: ${gs.linesCleared}`;
+}
+
 function syncName(name: string) {
   const inp = document.getElementById('player-name') as HTMLInputElement | null;
   const mobInp = document.getElementById('mob-player-name') as HTMLInputElement | null;
@@ -73,9 +84,14 @@ document.getElementById('mob-start')?.addEventListener('click', () => {
   if (mobNameGroup) mobNameGroup.style.display = 'none';
   if (mobStart) mobStart.style.display = 'none';
   if (mobReset) mobReset.style.display = '';
+  document.getElementById('app')?.classList.add('game-active');
 });
 
 document.getElementById('mob-reset')?.addEventListener('click', () => {
+  (document.getElementById('reset') as HTMLButtonElement | null)?.click();
+});
+
+document.getElementById('mob-reset-overlay')?.addEventListener('click', () => {
   (document.getElementById('reset') as HTMLButtonElement | null)?.click();
 });
 
@@ -141,6 +157,7 @@ document.getElementById("start")?.addEventListener("click", () => {
   if (resetEl) resetEl.style.display = "";
   fitCanvas();
   initGame();
+  document.getElementById('app')?.classList.add('game-active');
 });
 
 // Reset / New Game
@@ -189,6 +206,7 @@ function returnToTitle() {
   if (resetEl) resetEl.style.display = "none";
   fitCanvas();
   redrawTitleScreen();
+  document.getElementById('app')?.classList.remove('game-active');
 }
 
 // ── Mobile virtual D-pad controls ─────────────────────────────────────
@@ -262,6 +280,7 @@ function step(timestamp: number) {
   if (!gameStarted) { requestAnimationFrame(step); return; }
 
   gameLoop(timestamp);
+  updateMobileScoreOverlay();
   const gs = getGameState();
 
   if (gs.status === "gameover" && !gameOverHandled) {

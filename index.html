@@ -129,9 +129,9 @@
       border-color: #aa00ff;
     }
 
-    /* Only show dpad on touch devices */
+    /* Only show dpad on touch devices during active game */
     @media (hover: none) and (pointer: coarse) {
-      #dpad { display: block !important; }
+      #app.game-active #dpad { display: block !important; }
     }
 
     /* ── MOBILE PORTRAIT OPTIMIZATION ─────────────────────────── */
@@ -240,50 +240,98 @@
         white-space: nowrap;
       }
 
-      /* D-pad below the canvas, not overlapping */
-      #dpad {
-        position: relative !important;
-        bottom: auto !important;
-        right: auto !important;
-        width: 100%;
+      /* D-pad: fixed at bottom of screen, compact */
+      #app.game-active #dpad {
         display: flex !important;
-        justify-content: center;
-        padding: 8px 0 4px;
-        opacity: 1 !important;
-        background: rgba(1, 5, 20, 0.6);
+        position: fixed !important;
+        bottom: 8px !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%);
+        width: auto !important;
+        padding: 6px 10px !important;
+        background: rgba(1, 5, 20, 0.8) !important;
+        border-radius: 16px;
+        border: 1px solid rgba(122, 252, 255, 0.15);
+        backdrop-filter: blur(6px);
+        opacity: 0.92 !important;
       }
 
       .dpad-btn {
-        width: 62px !important;
-        height: 62px !important;
-        font-size: 22px !important;
-        border-radius: 14px !important;
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 18px !important;
+        border-radius: 10px !important;
       }
 
       .dpad-center {
-        width: 62px !important;
-        height: 62px !important;
-        font-size: 24px !important;
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 20px !important;
       }
 
       #dpad-cross {
-        gap: 6px !important;
+        gap: 4px !important;
       }
 
       .dpad-middle-row {
-        gap: 6px !important;
+        gap: 4px !important;
+      }
+
+      /* Score overlay — shown only during game, fixed top */
+      #mobile-score-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 60;
+        background: rgba(1, 5, 20, 0.82);
+        backdrop-filter: blur(4px);
+        padding: 5px 14px;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        font: bold 12px 'Courier New', monospace;
+        color: #7afcff;
+        border-bottom: 1px solid rgba(122, 252, 255, 0.12);
+      }
+
+      #app.game-active #mobile-score-overlay {
+        display: flex !important;
+      }
+
+      /* Push canvas down to avoid score overlay overlap */
+      #app.game-active canvas#game {
+        margin-top: 32px !important;
       }
     }
 
-    /* Desktop/landscape: mobile-topbar always hidden */
-    #mobile-topbar {
-      display: none;
-    }
+/* Desktop/landscape: mobile-topbar always hidden */
+#mobile-topbar {
+  display: none;
+}
+
+/* Desktop: mobile-score-overlay always hidden */
+#mobile-score-overlay {
+  display: none !important;
+}
   </style>
     <title>origamix</title>
   </head>
   <body>
     <div id="app" style="position:relative">
+      <!-- Mobile score overlay (shows during gameplay) -->
+      <div id="mobile-score-overlay">
+        <span id="mob-score-puntaje">Puntaje: 0</span>
+        <span id="mob-score-nivel">Nivel: 1</span>
+        <span id="mob-score-lineas">Líneas: 0</span>
+        <button id="mob-reset-overlay" style="
+          background:#c8960c;color:#0d0d0d;border:none;
+          border-radius:6px;padding:3px 8px;
+          font:bold 11px 'Courier New',monospace;cursor:pointer;
+        ">↻</button>
+      </div>
       <!-- Mobile top bar (portrait only) -->
       <div id="mobile-topbar" style="display:none">
         <div class="mob-name-group">
