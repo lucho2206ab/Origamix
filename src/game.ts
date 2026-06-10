@@ -1,3 +1,4 @@
+// DONE: delta capped at 100ms - prevents mobile frame spike
 // DONE: penalty system removed, piece rendering uses internal diagonal
 import type { GameState, Piece, TriangleRef } from "./types.ts";
 import { createBoard, getZone, getCell, isRowComplete, isColComplete, applyGravity } from "./board";
@@ -248,7 +249,8 @@ export function resetGame() {
 
 export function gameLoop(timestamp: number) {
   if (!state.lastTimestamp) state.lastTimestamp = timestamp;
-  const delta = (timestamp - state.lastTimestamp) / 1000; // seconds
+  const rawDelta = (timestamp - state.lastTimestamp) / 1000; // seconds
+  const delta = Math.min(rawDelta, 0.1); // cap at 100ms to prevent spike on mobile
   state.lastTimestamp = timestamp;
 
   if (state.status !== 'playing') {
