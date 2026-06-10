@@ -133,11 +133,170 @@
     @media (hover: none) and (pointer: coarse) {
       #dpad { display: block !important; }
     }
+
+    /* ── MOBILE PORTRAIT OPTIMIZATION ─────────────────────────── */
+    @media (max-width: 600px) and (orientation: portrait) {
+
+      body {
+        justify-content: flex-start;
+        background: #020814;
+        overflow: hidden;
+      }
+
+      #app {
+        width: 100%;
+        max-width: 100%;
+        height: 100dvh;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+        justify-content: flex-start;
+        gap: 0;
+      }
+
+      /* Hide normal ui-bar and scores — replaced by overlay */
+      #ui-bar {
+        display: none !important;
+      }
+      #scores {
+        display: none !important;
+      }
+
+      /* Canvas fills width, auto height */
+      canvas#game {
+        width: 100vw !important;
+        height: auto !important;
+        max-width: 100vw !important;
+        max-height: 58dvh !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+      }
+
+      /* Compact mobile top bar overlaid on canvas */
+      #mobile-topbar {
+        display: flex !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        background: rgba(1, 5, 20, 0.75);
+        backdrop-filter: blur(4px);
+        padding: 6px 12px;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        pointer-events: auto;
+      }
+
+      #mobile-topbar .mob-name-group {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+      }
+
+      #mobile-topbar input {
+        background: rgba(26, 26, 46, 0.9);
+        border: 1px solid rgba(122, 252, 255, 0.3);
+        border-radius: 6px;
+        padding: 5px 10px;
+        font: 12px 'Courier New', monospace;
+        color: #e0e0e0;
+        outline: none;
+        width: 110px;
+      }
+
+      #mobile-topbar button {
+        border-radius: 6px;
+        padding: 5px 10px;
+        font: bold 12px 'Courier New', monospace;
+        cursor: pointer;
+        border: 1px solid rgba(122, 252, 255, 0.4);
+        background: transparent;
+        color: #7afcff;
+      }
+
+      #mobile-topbar #mob-start {
+        background: #00cc66;
+        color: #0d0d0d;
+        border-color: transparent;
+      }
+
+      #mobile-topbar #mob-reset {
+        background: #c8960c;
+        color: #0d0d0d;
+        border-color: transparent;
+      }
+
+      #mobile-topbar .mob-score {
+        font: bold 12px 'Courier New', monospace;
+        color: #c8960c;
+        text-shadow: 0 0 8px rgba(200, 150, 12, 0.5);
+        white-space: nowrap;
+      }
+
+      /* D-pad below the canvas, not overlapping */
+      #dpad {
+        position: relative !important;
+        bottom: auto !important;
+        right: auto !important;
+        width: 100%;
+        display: flex !important;
+        justify-content: center;
+        padding: 8px 0 4px;
+        opacity: 1 !important;
+        background: rgba(1, 5, 20, 0.6);
+      }
+
+      .dpad-btn {
+        width: 62px !important;
+        height: 62px !important;
+        font-size: 22px !important;
+        border-radius: 14px !important;
+      }
+
+      .dpad-center {
+        width: 62px !important;
+        height: 62px !important;
+        font-size: 24px !important;
+      }
+
+      #dpad-cross {
+        gap: 6px !important;
+      }
+
+      .dpad-middle-row {
+        gap: 6px !important;
+      }
+    }
+
+    /* Desktop/landscape: mobile-topbar always hidden */
+    #mobile-topbar {
+      display: none;
+    }
   </style>
     <title>origamix</title>
   </head>
   <body>
-    <div id="app">
+    <div id="app" style="position:relative">
+      <!-- Mobile top bar (portrait only) -->
+      <div id="mobile-topbar" style="display:none">
+        <div class="mob-name-group">
+          <input id="mob-player-name" type="text" placeholder="Tu nombre" maxlength="20">
+          <button id="mob-name-ok">OK</button>
+          <span id="mob-name-confirmed" style="color:#00ff88;font:bold 14px monospace;opacity:0;transition:opacity .3s">✓</span>
+        </div>
+        <button id="mob-start" disabled>▶ START</button>
+        <button id="mob-reset" style="display:none">↻ NEW</button>
+        <div class="mob-score">
+          <span>🏆 </span><span id="mob-high-score">--</span>
+        </div>
+      </div>
       <div id="ui-bar">
         <div id="name-group">
           <input id="player-name" type="text" placeholder="Tu nombre" maxlength="20">

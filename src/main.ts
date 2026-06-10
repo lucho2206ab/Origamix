@@ -1,3 +1,4 @@
+// DONE: mobile portrait layout - canvas max 58dvh, dpad below canvas, overlay topbar
 // DONE: addTouchControls moved outside step() - was adding listeners every frame
 // DONE: virtual dpad buttons replace swipe - touchstart fires key immediately
 import "./style.css";
@@ -28,17 +29,66 @@ function updateScoreDisplay() {
   const el = document.getElementById("high-score");
   if (!el) return;
   el.textContent = scores.length > 0 ? `${scores[0].score} — ${scores[0].name}` : "--";
+  syncMobileScore();
 }
+
+// ── Mobile topbar sync ─────────────────────────────────────────────────
+function syncMobileScore() {
+  const el = document.getElementById('mob-high-score');
+  if (!el) return;
+  const raw = localStorage.getItem('origami_scores');
+  const scores: { name: string; score: number }[] = raw ? JSON.parse(raw) : [];
+  el.textContent = scores.length > 0 ? `${scores[0].score} — ${scores[0].name}` : '--';
+}
+
+function syncName(name: string) {
+  const inp = document.getElementById('player-name') as HTMLInputElement | null;
+  const mobInp = document.getElementById('mob-player-name') as HTMLInputElement | null;
+  if (inp) inp.value = name;
+  if (mobInp) mobInp.value = name;
+}
+
+document.getElementById('mob-name-ok')?.addEventListener('click', () => {
+  const mobInp = document.getElementById('mob-player-name') as HTMLInputElement | null;
+  const name = sanitizeName(mobInp?.value ?? '');
+  if (!name) return;
+  playerName = name;
+  syncName(name);
+  localStorage.setItem('origami_player_name', name);
+  const conf = document.getElementById('mob-name-confirmed');
+  if (conf) conf.style.opacity = '1';
+  document.getElementById('name-confirmed')?.classList.add('show');
+  const mobStart = document.getElementById('mob-start') as HTMLButtonElement | null;
+  const desktopStart = document.getElementById('start') as HTMLButtonElement | null;
+  if (mobStart) mobStart.disabled = false;
+  if (desktopStart) desktopStart.disabled = false;
+  redrawTitleScreen();
+});
+
+document.getElementById('mob-start')?.addEventListener('click', () => {
+  (document.getElementById('start') as HTMLButtonElement | null)?.click();
+  const mobNameGroup = document.querySelector('#mobile-topbar .mob-name-group') as HTMLElement | null;
+  const mobStart = document.getElementById('mob-start') as HTMLElement | null;
+  const mobReset = document.getElementById('mob-reset') as HTMLElement | null;
+  if (mobNameGroup) mobNameGroup.style.display = 'none';
+  if (mobStart) mobStart.style.display = 'none';
+  if (mobReset) mobReset.style.display = '';
+});
+
+document.getElementById('mob-reset')?.addEventListener('click', () => {
+  (document.getElementById('reset') as HTMLButtonElement | null)?.click();
+});
 
 // Restore saved name
 const savedName = localStorage.getItem("origami_player_name");
 if (savedName) {
   playerName = savedName;
-  const input = document.getElementById("player-name") as HTMLInputElement | null;
-  if (input) input.value = savedName;
+  syncName(savedName);
   document.getElementById("name-confirmed")?.classList.add("show");
   const startBtn = document.getElementById("start") as HTMLButtonElement | null;
   if (startBtn) startBtn.disabled = false;
+  const mobStart = document.getElementById("mob-start") as HTMLButtonElement | null;
+  if (mobStart) mobStart.disabled = false;
 }
 
 function redrawTitleScreen() {
@@ -69,6 +119,11 @@ document.getElementById("player-name")?.addEventListener("keydown", (e: Keyboard
     (document.getElementById("name-ok") as HTMLButtonElement | null)?.click();
   }
 });
+document.getElementById("mob-player-name")?.addEventListener("keydown", (e: KeyboardEvent) => {
+  if (e.key === "Enter") {
+    (document.getElementById("mob-name-ok") as HTMLButtonElement | null)?.click();
+  }
+});
 
 // START button
 document.getElementById("start")?.addEventListener("click", () => {
@@ -97,6 +152,12 @@ document.getElementById("reset")?.addEventListener("click", () => {
 function fitCanvas() {
   const canvas = document.querySelector<HTMLCanvasElement>("#game");
   if (!canvas) return;
+  const isMobilePortrait = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
+  if (isMobilePortrait) {
+    canvas.style.width = "100vw";
+    canvas.style.height = "auto";
+    return;
+  }
   const availW = window.innerWidth - 32;
   const availH = window.innerHeight - 130;
   const scale = Math.min(1, availW / 760, availH / 650);
