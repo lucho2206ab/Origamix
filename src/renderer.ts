@@ -122,12 +122,15 @@ export function render(state: GameState) {
     ctx.shadowBlur = 0;
   }
 
-  // UI
-  ctx.fillStyle = '#e0e0e0';
-  ctx.font = '16px Courier New';
-  ctx.fillText(`Puntaje: ${state.score}`, 20, 36);
-  ctx.fillText(`Nivel: ${state.level}`, 180, 36);
-  ctx.fillText(`Líneas: ${state.linesCleared}`, 320, 36);
+  // UI — skip on mobile portrait (overlay shows instead)
+  const isMobilePortrait = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
+  if (!isMobilePortrait) {
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = '16px Courier New';
+    ctx.fillText(`Puntaje: ${state.score}`, 20, 36);
+    ctx.fillText(`Nivel: ${state.level}`, 180, 36);
+    ctx.fillText(`Líneas: ${state.linesCleared}`, 320, 36);
+  }
 
   // effects (simple)
   if (state.effects && state.effects.length) {
