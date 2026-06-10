@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; worker-src 'self';">
     <!-- PWA -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -62,6 +62,77 @@
     }
     /* Prevent text selection on touch */
     #app { user-select: none; -webkit-user-select: none; }
+
+    /* D-pad overlay */
+    #dpad {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 100;
+      opacity: 0.82;
+      touch-action: none;
+    }
+
+    #dpad-cross {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .dpad-middle-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .dpad-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      border: 2px solid rgba(0, 207, 255, 0.6);
+      background: rgba(13, 13, 30, 0.85);
+      color: #00cfff;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.1s, transform 0.08s;
+      touch-action: manipulation;
+    }
+
+    .dpad-btn:active,
+    .dpad-btn.pressed {
+      background: rgba(0, 207, 255, 0.25);
+      transform: scale(0.92);
+      border-color: #00cfff;
+    }
+
+    .dpad-center {
+      width: 52px;
+      height: 52px;
+      font-size: 22px;
+      background: rgba(30, 13, 40, 0.85);
+      border-color: rgba(170, 0, 255, 0.6);
+      color: #aa00ff;
+    }
+
+    .dpad-center:active,
+    .dpad-center.pressed {
+      background: rgba(170, 0, 255, 0.25);
+      border-color: #aa00ff;
+    }
+
+    /* Only show dpad on touch devices */
+    @media (hover: none) and (pointer: coarse) {
+      #dpad { display: block !important; }
+    }
   </style>
     <title>origamix</title>
   </head>
@@ -82,6 +153,18 @@
         <span id="high-score">--</span>
       </div>
       <canvas id="game" width="760" height="650"></canvas>
+      <!-- Virtual D-pad for mobile -->
+      <div id="dpad" style="display:none">
+        <div id="dpad-cross">
+          <button class="dpad-btn" id="btn-up"    data-code="ArrowUp">▲</button>
+          <div class="dpad-middle-row">
+            <button class="dpad-btn" id="btn-left"  data-code="ArrowLeft">◄</button>
+            <button class="dpad-btn dpad-center" id="btn-rotate" data-code="Space">↺</button>
+            <button class="dpad-btn" id="btn-right" data-code="ArrowRight">►</button>
+          </div>
+          <button class="dpad-btn" id="btn-down"  data-code="ArrowDown">▼</button>
+        </div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

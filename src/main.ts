@@ -1,3 +1,4 @@
+// DONE: virtual dpad buttons replace swipe - touchstart fires key immediately
 import "./style.css";
 import { initGame, gameLoop, resetGame, getGameState } from "./game";
 import { renderTitleScreen } from "./renderer";
@@ -147,21 +148,13 @@ function step(timestamp: number) {
 
 requestAnimationFrame(step);
 
-// ── Touch controls ────────────────────────────────────────────────────
-// DONE: touch controls fixed - fireKey sets ev.code correctly
+// ── Mobile virtual D-pad controls ─────────────────────────────────────
 (function addTouchControls() {
-  const canvas = document.getElementById('game') as HTMLCanvasElement;
-  if (!canvas) return;
-
-  let touchStartX = 0;
-  let touchStartY = 0;
-  const SWIPE_THRESHOLD = 30;
-
-  // Helper: fire a synthetic keyboard event that matches input.ts (uses ev.code)
+  // Helper: fire synthetic keyboard event matching input.ts (uses ev.code)
   function fireKey(code: string): void {
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        code,          // ← input.ts switches on ev.code
+        code,
         key: code === 'Space' ? ' ' : code,
         bubbles: true,
         cancelable: true,
@@ -169,33 +162,65 @@ requestAnimationFrame(step);
     );
   }
 
-  canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-  }, { passive: false });
+  // Wire up each D-pad button
+  const buttons: { id: string; code: string }[] = [
+    { id: 'btn-up',     code: 'ArrowUp'    },
+    { id: 'btn-down',   code: 'ArrowDown'  },
+    { id: 'btn-left',   code: 'ArrowLeft'  },
+    { id: 'btn-right',  code: 'ArrowRight' },
+    { id: 'btn-rotate', code: 'Space'      },
+  ];
 
-  canvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const dy = e.changedTouches[0].clientY - touchStartY;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
+  for (const { id, code } of buttons) {
+    const btn = document.getElementById(id);
+    if (!btn) continue;
 
-    if (absDx < 10 && absDy < 10) {
-      // TAP → rotate
-      fireKey('Space');
-      return;
-    }
+    // touchstart fires key immediately (responsive feel)
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      btn.classList.add('pressed');
+      fireKey(code);
+    }, { passive: false });
 
-    if (absDx > SWIPE_THRESHOLD || absDy > SWIPE_THRESHOLD) {
-      if (absDx > absDy) {
-        fireKey(dx > 0 ? 'ArrowRight' : 'ArrowLeft');
-      } else {
-        fireKey(dy > 0 ? 'ArrowDown' : 'ArrowUp');
+    btn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      btn.classList.remove('pressed');
+    }, { passive: false });
+
+    // Fallback for mouse (desktop testing)
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      btn.classList.add('pressed');
+      fireKey(code);
+    });
+
+    btn.addEventListener('mouseup', () => {
+      btn.classList.remove('pressed');
+    });
+  }
+
+  // Keep tap-to-rotate on canvas as fallback (tap only, no swipe)
+  const canvas = document.getElementById('game') as HTMLCanvasElement;
+  if (canvas) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
+      const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+      // Only fire rotate on clean tap (no movement)
+      if (dx < 8 && dy < 8) {
+        fireKey('Space');
       }
-    }
-  }, { passive: false });
+    }, { passive: false });
+  }
 })();
 }
 
