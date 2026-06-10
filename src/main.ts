@@ -148,13 +148,26 @@ function step(timestamp: number) {
 requestAnimationFrame(step);
 
 // ── Touch controls ────────────────────────────────────────────────────
+// DONE: touch controls fixed - fireKey sets ev.code correctly
 (function addTouchControls() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   if (!canvas) return;
 
   let touchStartX = 0;
   let touchStartY = 0;
-  const SWIPE_THRESHOLD = 30; // minimum px to count as swipe
+  const SWIPE_THRESHOLD = 30;
+
+  // Helper: fire a synthetic keyboard event that matches input.ts (uses ev.code)
+  function fireKey(code: string): void {
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        code,          // ← input.ts switches on ev.code
+        key: code === 'Space' ? ' ' : code,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+  }
 
   canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
@@ -171,18 +184,16 @@ requestAnimationFrame(step);
 
     if (absDx < 10 && absDy < 10) {
       // TAP → rotate
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true }));
+      fireKey('Space');
       return;
     }
 
     if (absDx > SWIPE_THRESHOLD || absDy > SWIPE_THRESHOLD) {
-      let key: string;
       if (absDx > absDy) {
-        key = dx > 0 ? 'ArrowRight' : 'ArrowLeft';
+        fireKey(dx > 0 ? 'ArrowRight' : 'ArrowLeft');
       } else {
-        key = dy > 0 ? 'ArrowDown' : 'ArrowUp';
+        fireKey(dy > 0 ? 'ArrowDown' : 'ArrowUp');
       }
-      window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
     }
   }, { passive: false });
 })();
