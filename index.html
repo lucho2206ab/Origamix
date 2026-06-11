@@ -164,24 +164,22 @@
         display: none !important;
       }
 
-      /* Canvas fills width, auto height */
-      #app.game-active canvas#game {
-        margin-top: 32px !important;
-        max-height: calc(100dvh - 32px - 220px) !important;
+      /* Canvas fills available space */
+      canvas#game {
         width: 100vw !important;
         height: auto !important;
         max-width: 100vw !important;
-        border-radius: 0 !important;
-        border-left: none !important;
-        border-right: none !important;
+        max-height: calc(100dvh - 230px) !important;
+        margin-top: 0 !important;
+        display: block;
       }
 
-      canvas#game {
-        max-height: calc(100dvh - 32px - 180px) !important;
+      #app.game-active canvas#game {
+        max-height: calc(100dvh - 230px) !important;
+        margin-top: 36px !important;
         width: 100vw !important;
         height: auto !important;
         max-width: 100vw !important;
-        margin: 0 !important;
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
