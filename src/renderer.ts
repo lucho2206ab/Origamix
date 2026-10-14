@@ -64,8 +64,8 @@ export function render(state: GameState) {
   const rows = state.board.length;
   const cols = state.board[0].length;
   const S = 26; // cell size
-  const boardX = 20;
-  const boardY = 100;
+  const boardX = (canvas.width - cols * S) / 2;
+  const boardY = (canvas.height - rows * S) / 2;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#0d0d0d';
@@ -217,23 +217,28 @@ export function renderTitleScreen(ctx: CanvasRenderingContext2D, canvas: HTMLCan
 
   ctx.fillStyle = '#7afcff';
   ctx.font = '20px Courier New';
-  ctx.fillText('Triangular Grid Puzzle', canvas.width / 2, 250);
+  ctx.fillText('Puzzle de piezas triangulares', canvas.width / 2, 250);
 
   ctx.fillStyle = '#e0e0e0';
+  ctx.font = '18px Courier New';
+  ctx.fillText('Las piezas nacen en el centro.', canvas.width / 2, 292);
+  ctx.fillText('Elige una pared y guíalas hasta ella.', canvas.width / 2, 316);
+  ctx.fillText('Completa líneas sin separar sus triángulos.', canvas.width / 2, 340);
+
   ctx.font = '16px Courier New';
-  ctx.fillText('Controles:', canvas.width / 2, 320);
-  ctx.fillText('← → ↑ ↓  — Dirigir pieza', canvas.width / 2, 348);
-  ctx.fillText('Espacio  — Rotar', canvas.width / 2, 372);
-  ctx.fillText('S        — Caída rápida', canvas.width / 2, 396);
+  ctx.fillText('Controles:', canvas.width / 2, 386);
+  ctx.fillText('← → ↑ ↓  — Dirigir pieza', canvas.width / 2, 414);
+  ctx.fillText('Espacio  — Rotar', canvas.width / 2, 438);
+  ctx.fillText('S        — Caída rápida', canvas.width / 2, 462);
 
   if (playerName) {
     ctx.fillStyle = '#00ff88';
     ctx.font = '18px Courier New';
-    ctx.fillText(`Jugador: ${playerName}`, canvas.width / 2, 450);
+    ctx.fillText(`Jugador: ${playerName}`, canvas.width / 2, 502);
   }
 
   ctx.fillStyle = 'rgba(200,150,12,0.6)';
   ctx.font = 'bold 22px Courier New';
-  ctx.fillText('Presiona ▶ START para jugar', canvas.width / 2, 510);
+  ctx.fillText('Presiona ▶ START para jugar', canvas.width / 2, 550);
   ctx.textAlign = 'left';
 }

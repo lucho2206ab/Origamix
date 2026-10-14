@@ -7,13 +7,13 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
-        name: 'Origami Neon',
-        short_name: 'OrigaMix',
-        description: 'Origami-style puzzle game with triangular pieces',
+        name: 'Origamix',
+        short_name: 'Origamix',
+        description: 'Puzzle de piezas triangulares en un tablero en forma de cruz',
+        lang: 'es',
         theme_color: '#0d0d0d',
         background_color: '#0d0d0d',
         display: 'fullscreen',
-        orientation: 'landscape',
         scope: '/',
         start_url: '/',
         icons: [
