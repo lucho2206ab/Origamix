@@ -62,6 +62,23 @@
     }
 
     @media (orientation: landscape) and (max-height: 600px) {
+      #app.game-active {
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: none !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        overflow: hidden !important;
+      }
+
+      #app.game-active #ui-bar,
+      #app.game-active #scores {
+        display: none !important;
+      }
+
       #app.game-active canvas#game {
         position: fixed !important;
         top: calc(50% + 29px) !important;
