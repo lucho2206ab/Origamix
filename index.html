@@ -64,14 +64,77 @@
     @media (orientation: landscape) and (max-height: 600px) {
       #app.game-active canvas#game {
         position: fixed !important;
-        top: -12px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: min(58vw, 124dvh) !important;
+        top: calc(50% + 29px) !important;
+        left: 35vw !important;
+        transform: translate(-50%, -50%) !important;
+        width: min(99.4vw, 116.92dvh) !important;
         height: auto !important;
         max-width: none !important;
         max-height: none !important;
         margin: 0 !important;
+      }
+
+      #app.game-active #mobile-score-overlay {
+        display: flex !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 110;
+        min-height: 42px;
+        padding: 4px 16px;
+        gap: clamp(10px, 2.5vw, 32px);
+        justify-content: center;
+        align-items: center;
+        background: rgba(1, 5, 20, 0.88);
+        backdrop-filter: blur(4px);
+        border-bottom: 1px solid rgba(122, 252, 255, 0.18);
+        color: #7afcff;
+        font: bold clamp(16px, 3.2vh, 22px) 'Courier New', monospace;
+        white-space: nowrap;
+      }
+
+      #app.game-active .mob-reset-btn {
+        padding: 5px 12px;
+        border: 1px solid rgba(200, 150, 12, 0.8);
+        border-radius: 7px;
+        background: #c8960c;
+        color: #0d0d0d;
+        font: bold clamp(12px, 2.2vh, 16px) 'Courier New', monospace;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      #app.game-active #dpad {
+        display: flex !important;
+        position: fixed !important;
+        top: calc(50% + 29px) !important;
+        right: max(12px, 2vw) !important;
+        bottom: auto !important;
+        left: auto !important;
+        transform: translateY(-50%) !important;
+        padding: 6px !important;
+        background: rgba(1, 5, 20, 0.86) !important;
+        border: 1px solid rgba(122, 252, 255, 0.2);
+        border-radius: 16px;
+        backdrop-filter: blur(6px);
+        opacity: 0.96 !important;
+      }
+
+      #app.game-active .dpad-btn {
+        width: clamp(48px, 12vh, 66px) !important;
+        height: clamp(48px, 12vh, 66px) !important;
+        font-size: clamp(20px, 5vh, 28px) !important;
+        border-radius: 12px !important;
+      }
+
+      #app.game-active .dpad-center {
+        font-size: clamp(22px, 5.5vh, 32px) !important;
+      }
+
+      #app.game-active #dpad-cross,
+      #app.game-active .dpad-middle-row {
+        gap: 4px !important;
       }
     }
     /* Prevent text selection on touch */

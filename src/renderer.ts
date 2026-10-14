@@ -125,9 +125,10 @@ export function render(state: GameState) {
     ctx.shadowBlur = 0;
   }
 
-  // UI — skip on mobile portrait (overlay shows instead)
+  // Compact mobile layouts render their score in a larger fixed overlay.
   const isMobilePortrait = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
-  if (!isMobilePortrait) {
+  const isMobileLandscape = window.innerWidth > window.innerHeight && window.innerHeight <= 600;
+  if (!isMobilePortrait && !isMobileLandscape) {
     ctx.fillStyle = '#e0e0e0';
     ctx.font = '16px Courier New';
     ctx.fillText(`Puntaje: ${state.score}`, 20, 36);
