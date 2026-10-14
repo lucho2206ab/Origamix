@@ -1,5 +1,116 @@
-// DONE: applyGravity loop direction fixed - pulls from wall edge inward
-import type { BoardCell, DiagonalDir, Zone, HalfCell, Piece } from "./types.ts";
+// DONE: board movement validates triangle parity and locked pieces remain intact
+import type { BoardCell, DiagonalDir, Zone, HalfCell, Piece, TriangleRef, TriSlot } from "./types.ts";
+
+type Point = readonly [number, number];
+
+function triangleVertices(row: number, col: number, slot: TriSlot, diagonalParity: number): Point[] {
+  if (diagonalParity === 0) {
+    return slot === 'TL'
+      ? [[col, row], [col + 1, row], [col, row + 1]]
+      : [[col + 1, row], [col + 1, row + 1], [col, row + 1]];
+  }
+  return slot === 'TL'
+    ? [[col, row], [col + 1, row], [col + 1, row + 1]]
+    : [[col, row], [col + 1, row + 1], [col, row + 1]];
+}
+
+function shareSide(a: Point[], b: Point[]): boolean {
+  return a.filter(([x, y]) => b.some(([otherX, otherY]) => x === otherX && y === otherY)).length >= 2;
+}
+
+export function getPieceBoardSlots(
+  triangles: TriangleRef[],
+  anchorRow: number,
+  anchorCol: number,
+  board: (BoardCell | null)[][]
+): TriSlot[] | null {
+  const internalPolygons = triangles.map(t =>
+    triangleVertices(t.dRow, t.dCol, t.slot, (t.dRow + t.dCol) & 1)
+  );
+  const adjacent = triangles.map((_, i) =>
+    triangles.map((__, j) => i !== j && shareSide(internalPolygons[i], internalPolygons[j]))
+  );
+  const masks = Array.from({ length: 1 << triangles.length }, (_, mask) => mask);
+  masks.sort((a, b) => {
+    const slotChanges = (mask: number) => triangles.reduce((count, triangle, index) => {
+      const slot: TriSlot = (mask >> index) & 1 ? 'BR' : 'TL';
+      return count + (slot !== triangle.slot ? 1 : 0);
+    }, 0);
+    return slotChanges(a) - slotChanges(b);
+  });
+
+  let bestSlots: TriSlot[] | null = null;
+  let bestScore = Infinity;
+  for (const mask of masks) {
+    const slots = triangles.map((_, index): TriSlot => (mask >> index) & 1 ? 'BR' : 'TL');
+    let valid = true;
+    const worldPolygons = triangles.map((triangle, index) =>
+      triangleVertices(
+        anchorRow + triangle.dRow,
+        anchorCol + triangle.dCol,
+        slots[index],
+        (anchorRow + triangle.dRow + anchorCol + triangle.dCol) & 1
+      )
+    );
+
+    for (let i = 0; i < triangles.length && valid; i++) {
+      const triangle = triangles[i];
+      const row = anchorRow + triangle.dRow;
+      const col = anchorCol + triangle.dCol;
+      const cell = board[row]?.[col];
+      if (!cell) {
+        valid = false;
+        break;
+      }
+      const half = slots[i] === 'TL' ? cell.TL : cell.BR;
+      if (half.filled) {
+        valid = false;
+        break;
+      }
+
+      for (let j = i + 1; j < triangles.length && valid; j++) {
+        const sameCell = triangle.dRow === triangles[j].dRow && triangle.dCol === triangles[j].dCol;
+        if (sameCell && slots[i] === slots[j]) {
+          valid = false;
+        }
+      }
+    }
+
+    if (!valid) continue;
+
+    const connected = new Set([0]);
+    const queue = [0];
+    while (queue.length > 0) {
+      const current = queue.pop()!;
+      for (let other = 0; other < triangles.length; other++) {
+        if (!connected.has(other) && shareSide(worldPolygons[current], worldPolygons[other])) {
+          connected.add(other);
+          queue.push(other);
+        }
+      }
+    }
+    if (connected.size !== triangles.length) continue;
+
+    let changedEdges = 0;
+    for (let i = 0; i < triangles.length; i++) {
+      for (let j = i + 1; j < triangles.length; j++) {
+        const targetAdjacent = shareSide(worldPolygons[i], worldPolygons[j]);
+        if (adjacent[i][j] !== targetAdjacent) changedEdges++;
+      }
+    }
+    const slotChanges = slots.reduce(
+      (count, slot, index) => count + (slot !== triangles[index].slot ? 1 : 0),
+      0
+    );
+    const score = changedEdges * 100 + slotChanges;
+    if (score < bestScore) {
+      bestSlots = slots;
+      bestScore = score;
+    }
+  }
+
+  return bestSlots;
+}
 
 // Build a 20x20 virtual grid where cells outside the cross are null
 export function createBoard(): (BoardCell | null)[][] {
@@ -77,58 +188,6 @@ export function isColComplete(board: (BoardCell | null)[][], col: number): boole
   return true;
 }
 
-// Simple gravity: after clearing rows, shift halves toward center depending on zone.
-export function applyGravity(board: (BoardCell | null)[][]) {
-  const empty = (): HalfCell => ({ filled: false, color: '#1e1e1e', isPenalty: false });
-
-  // TOP arm: stack AT row 0, pull cells upward
-  // Loop from wall (row 0) toward center (row 6)
-  for (let c = 7; c <= 12; c++) {
-    for (let r = 0; r <= 5; r++) {
-      const above = board[r]?.[c];
-      const below = board[r + 1]?.[c];
-      if (!above || !below) continue;
-      if (!above.TL.filled && below.TL.filled) { above.TL = { ...below.TL }; below.TL = empty(); }
-      if (!above.BR.filled && below.BR.filled) { above.BR = { ...below.BR }; below.BR = empty(); }
-    }
-  }
-
-  // BOTTOM arm: stack AT row 19, pull cells downward
-  // Loop from wall (row 19) toward center (row 13)
-  for (let c = 7; c <= 12; c++) {
-    for (let r = 19; r >= 14; r--) {
-      const below = board[r]?.[c];
-      const above = board[r - 1]?.[c];
-      if (!below || !above) continue;
-      if (!below.TL.filled && above.TL.filled) { below.TL = { ...above.TL }; above.TL = empty(); }
-      if (!below.BR.filled && above.BR.filled) { below.BR = { ...above.BR }; above.BR = empty(); }
-    }
-  }
-
-  // LEFT arm: stack AT col 0, pull cells leftward
-  // Loop from wall (col 0) toward center (col 6)
-  for (let r = 7; r <= 12; r++) {
-    for (let c = 0; c <= 5; c++) {
-      const left  = board[r]?.[c];
-      const right = board[r]?.[c + 1];
-      if (!left || !right) continue;
-      if (!left.TL.filled && right.TL.filled) { left.TL = { ...right.TL }; right.TL = empty(); }
-      if (!left.BR.filled && right.BR.filled) { left.BR = { ...right.BR }; right.BR = empty(); }
-    }
-  }
-
-  // RIGHT arm: stack AT col 19, pull cells rightward
-  // Loop from wall (col 19) toward center (col 13)
-  for (let r = 7; r <= 12; r++) {
-    for (let c = 19; c >= 14; c--) {
-      const right = board[r]?.[c];
-      const left  = board[r]?.[c - 1];
-      if (!right || !left) continue;
-      if (!right.TL.filled && left.TL.filled) { right.TL = { ...left.TL }; left.TL = empty(); }
-      if (!right.BR.filled && left.BR.filled) { right.BR = { ...left.BR }; left.BR = empty(); }
-    }
-  }
-}
 export function canMoveToward(piece: Piece, board: (BoardCell | null)[][], direction: 'top' | 'bottom' | 'left' | 'right'): boolean {
   let dr = 0, dc = 0;
   switch (direction) {
@@ -138,27 +197,10 @@ export function canMoveToward(piece: Piece, board: (BoardCell | null)[][], direc
     case 'right': dc = 1; break;
   }
 
-  for (const t of piece.triangles) {
-    const nr = piece.anchorRow + t.dRow + dr;
-    const nc = piece.anchorCol + t.dCol + dc;
-
-    // Check if next position is within the cross (including edge cells)
-    if (!isInCross(nr, nc)) return false;
-
-    const cell = getCell(board, nr, nc);
-    if (!cell) return false;
-
-    // Map triangle slot to board half-cell via per-cell diagonal parity
-    const internalParity = (t.dRow + t.dCol) & 1;
-    const boardParity = (nr + nc) & 1;
-    const boardSlot: 'TL' | 'BR' = internalParity !== boardParity
-      ? (t.slot === 'TL' ? 'BR' : 'TL')
-      : t.slot;
-    const half = boardSlot === 'TL' ? cell.TL : cell.BR;
-    if (half.filled) return false;
-  }
-
-  return true;
+  return getPieceBoardSlots(
+    piece.triangles,
+    piece.anchorRow + dr,
+    piece.anchorCol + dc,
+    board
+  ) !== null;
 }
-
-

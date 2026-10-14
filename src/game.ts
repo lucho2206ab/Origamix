@@ -1,7 +1,7 @@
 // DONE: delta capped at 100ms - prevents mobile frame spike
-// DONE: penalty system removed, piece rendering uses internal diagonal
-import type { GameState, Piece, TriangleRef } from "./types.ts";
-import { createBoard, getZone, getCell, isRowComplete, isColComplete, applyGravity } from "./board";
+// DONE: penalty system removed, piece movement and locking preserve shape
+import type { GameState, Piece } from "./types.ts";
+import { createBoard, getZone, isRowComplete, isColComplete, getPieceBoardSlots } from "./board";
 import { selectPieceForLevel, computeRotations } from "./piece";
 import { render } from "./renderer";
 import { speedForLevel } from "./score";
@@ -9,16 +9,6 @@ import { initInput } from "./input";
 import { addEffect, updateEffects } from "./effects";
 
 let state: GameState;
-
-// Maps a piece triangle's slot to the correct board half-cell by comparing
-// the triangle's internal diagonal with the destination board cell's diagonal.
-function boardSlotForTriangle(t: TriangleRef, cellRow: number, cellCol: number): 'TL' | 'BR' {
-  const internalParity = (t.dRow + t.dCol) & 1;
-  const boardParity = (cellRow + cellCol) & 1;
-  return internalParity !== boardParity
-    ? (t.slot === 'TL' ? 'BR' : 'TL')
-    : t.slot;
-}
 
 function spawnNextPiece() {
   if (state.status !== 'playing') return;
@@ -35,17 +25,7 @@ function spawnNextPiece() {
   ];
 
   for (const candidate of spawnCandidates) {
-    let fits = true;
-    for (const t of rotations[0]) {
-      const r = candidate.r + t.dRow;
-      const c = candidate.c + t.dCol;
-      const cell = getCell(state.board, r, c);
-      if (!cell) { fits = false; break; }
-      const checkSlot = boardSlotForTriangle(t, r, c);
-      const half = checkSlot === 'TL' ? cell.TL : cell.BR;
-      if (half.filled) { fits = false; break; }
-    }
-    if (fits) {
+    if (getPieceBoardSlots(rotations[0], candidate.r, candidate.c, state.board)) {
       const piece: Piece = {
         shape: { ...shape, triangles: shape.triangles },
         rotation: 0,
@@ -68,19 +48,27 @@ function spawnNextPiece() {
 }
 
 function lockPiece(piece: Piece) {
-  // 1. Write triangles to board (adjust slot for cell diagonal)
-  for (const t of piece.triangles) {
+  const slots = getPieceBoardSlots(
+    piece.triangles,
+    piece.anchorRow,
+    piece.anchorCol,
+    state.board
+  );
+  if (!slots) throw new Error(`Unable to lock piece ${piece.shape.name} at its current position`);
+
+  // 1. Write triangles using slots that preserve the piece's connections.
+  for (const [index, t] of piece.triangles.entries()) {
     const r = piece.anchorRow + t.dRow;
     const c = piece.anchorCol + t.dCol;
-    const cell = getCell(state.board, r, c);
-    if (!cell) continue;
-    const writeSlot = boardSlotForTriangle(t, r, c);
+    const cell = state.board[r]?.[c];
+    if (!cell) throw new Error(`Missing board cell while locking piece ${piece.shape.name}`);
+    const writeSlot = slots[index];
     const half = { filled: true, color: piece.shape.color, isPenalty: false };
     if (writeSlot === 'TL') cell.TL = half;
     else cell.BR = half;
   }
 
-  // 2. Check and clear completed lines FIRST (before gravity)
+  // 2. Check and clear completed lines without shifting the remaining pieces.
   let cleared = 0;
   for (let r = 0; r < state.board.length; r++) {
     if (isRowComplete(state.board, r)) {
@@ -105,10 +93,7 @@ function lockPiece(piece: Piece) {
     }
   }
 
-  // 3. Apply gravity AFTER clearing (so cleared cells become empty space)
-  applyGravity(state.board);
-
-  // 3b. Check if piece overflowed into CENTER → game over
+  // 3. Check if piece overflowed into CENTER → game over
   for (const t of piece.triangles) {
     const r = piece.anchorRow + t.dRow;
     const c = piece.anchorCol + t.dCol;
@@ -142,17 +127,7 @@ function rotateCurrent() {
   // try wall-kick offsets: no shift, left/right small, up/down
   const kicks = [ {r:0,c:0}, {r:0,c:-1}, {r:0,c:1}, {r:0,c:-2}, {r:0,c:2}, {r:-1,c:0}, {r:1,c:0} ];
   for (const k of kicks) {
-    let ok = true;
-    for (const t of candidate) {
-      const nr = p.anchorRow + t.dRow + k.r;
-      const nc = p.anchorCol + t.dCol + k.c;
-      const cell = getCell(state.board, nr, nc);
-      if (!cell) { ok = false; break; }
-      const checkSlot = boardSlotForTriangle(t, nr, nc);
-      const half = checkSlot === 'TL' ? cell.TL : cell.BR;
-      if (half.filled) { ok = false; break; }
-    }
-    if (ok) {
+    if (getPieceBoardSlots(candidate, p.anchorRow + k.r, p.anchorCol + k.c, state.board)) {
       p.triangles = candidate.map(t => ({ ...t }));
       p.rotation = nextRot as 0 | 1 | 2 | 3;
       p.anchorRow += k.r;
@@ -179,17 +154,7 @@ function setWallOrShift(dir: 'left'|'right'|'top'|'bottom') {
   if (dir === 'top')   dr = -1;
   if (dir === 'bottom') dr = 1;
 
-  // Validate shift won't go out of bounds
-  let ok = true;
-  for (const t of p.triangles) {
-    const nr = p.anchorRow + t.dRow + dr;
-    const nc = p.anchorCol + t.dCol + dc;
-    const cell = getCell(state.board, nr, nc);
-    if (!cell) { ok = false; break; }
-    const checkSlot = boardSlotForTriangle(t, nr, nc);
-    const half = checkSlot === 'TL' ? cell.TL : cell.BR;
-    if (half.filled) { ok = false; break; }
-  }
+  const ok = getPieceBoardSlots(p.triangles, p.anchorRow + dr, p.anchorCol + dc, state.board) !== null;
   if (ok) {
     p.anchorRow += dr;
     p.anchorCol += dc;
@@ -281,17 +246,13 @@ export function gameLoop(timestamp: number) {
         case 'right':  dc =  1; break;
       }
 
-      // Check NEXT position BEFORE moving (look-ahead)
-      let blocked = false;
-      for (const t of p.triangles) {
-        const nr = p.anchorRow + t.dRow + dr;
-        const nc = p.anchorCol + t.dCol + dc;
-        const cell = getCell(state.board, nr, nc);
-        if (!cell) { blocked = true; break; }
-        const checkSlot = boardSlotForTriangle(t, nr, nc);
-        const half = checkSlot === 'TL' ? cell.TL : cell.BR;
-        if (half.filled) { blocked = true; break; }
-      }
+      // Check the entire piece before moving so a blocked triangle cannot detach.
+      const blocked = getPieceBoardSlots(
+        p.triangles,
+        p.anchorRow + dr,
+        p.anchorCol + dc,
+        state.board
+      ) === null;
 
       if (!blocked) {
         // Safe to move
@@ -300,6 +261,7 @@ export function gameLoop(timestamp: number) {
       } else {
         // Lock at current position (do NOT move first)
         lockPiece(p);
+        state.currentPiece = null;
         spawnNextPiece();
         break;
       }

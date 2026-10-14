@@ -157,7 +157,7 @@ createBoard(): (BoardCell|null)[][]  // initialize all cells
 // For bounding box height H:
 // newRow = dCol
 // newCol = (H - 1) - dRow
-// Then: if diagonal of new cell differs from old → flip slot (TL↔BR)
+// Rotate cell coordinates and flip slots only for source cells on a '/' diagonal.
 function rotateCW(triangles: TriangleRef[]): TriangleRef[]
 ```
 
@@ -282,10 +282,8 @@ function isRowComplete(board, row): boolean
 // Vertical: col C is complete if every cross cell in col C has both TL+BR filled
 function isColComplete(board, col): boolean
 
-// After clear: apply gravity
-// TOP/BOTTOM arms: filled triangles fall toward CENTER (downward/upward)
-// LEFT/RIGHT arms: filled triangles slide toward CENTER (rightward/leftward)
-// Gravity moves HalfCells, preserving slot assignments where diagonal matches
+// Triangle slots remain attached to the piece as it moves or locks.
+// Locked pieces stay fixed; completed rows/columns clear without shifting survivors.
 ```
 
 ---
@@ -336,7 +334,7 @@ Level up every 500 points.
 Implement in this exact order. Add `// DONE: description` at top of each file when complete.
 
 - [ ] 1. `types.ts`    — All interfaces
-- [ ] 2. `board.ts`    — Cross board, zones, collision, lock, line clear, gravity
+- [ ] 2. `board.ts`    — Cross board, zones, collision, lock, line clear
 - [ ] 3. `piece.ts`    — Piece definitions, rotation, spawn
 - [ ] 4. `score.ts`    — Score, combos, level, speed, penalty interval
 - [ ] 5. `renderer.ts` — drawTriangle, drawBoard, drawPiece, drawGhost, drawUI

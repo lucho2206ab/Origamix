@@ -1,4 +1,5 @@
 import type { GameState, DiagonalDir, TriSlot } from "./types.ts";
+import { getPieceBoardSlots } from "./board";
 
 function drawTriangle(
   ctx: CanvasRenderingContext2D,
@@ -104,20 +105,22 @@ export function render(state: GameState) {
   ctx.strokeRect(boardX + 7 * S, boardY + 7 * S, 6 * S, 6 * S);
   ctx.setLineDash([]);
 
-  // Draw active piece (using internal diagonal to preserve shape)
+  // Draw active triangles with the same connected slots used for collision and lock.
   const p = state.currentPiece;
   if (p) {
+    const slots = getPieceBoardSlots(p.triangles, p.anchorRow, p.anchorCol, state.board);
+    if (!slots) throw new Error(`Cannot render piece ${p.shape.name} at its current position`);
+
     ctx.shadowColor = p.shape.color;
     ctx.shadowBlur = 16;
-    for (const t of p.triangles) {
+    for (const [index, t] of p.triangles.entries()) {
       const r = p.anchorRow + t.dRow;
       const c = p.anchorCol + t.dCol;
       const cell = state.board[r] && state.board[r][c];
       if (!cell) continue;
       const px = boardX + c * S;
       const py = boardY + r * S;
-      const diag = ((t.dRow + t.dCol) % 2 === 0 ? '\\' : '/') as DiagonalDir;
-      drawTriangle(ctx, px, py, S, diag, t.slot, p.shape.color, 1);
+      drawTriangle(ctx, px, py, S, cell.diag, slots[index], p.shape.color, 1);
     }
     ctx.shadowBlur = 0;
   }
