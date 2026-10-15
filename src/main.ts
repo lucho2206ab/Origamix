@@ -149,11 +149,9 @@ document.getElementById("start")?.addEventListener("click", () => {
   gameStarted = true;
   const startEl = document.getElementById("start");
   const nameGroup = document.getElementById("name-group");
-  const nameDisplay = document.getElementById("player-name-display");
   const resetEl = document.getElementById("reset");
   if (startEl) startEl.style.display = "none";
   if (nameGroup) nameGroup.style.display = "none";
-  if (nameDisplay) { nameDisplay.textContent = `Jugador: ${playerName}`; nameDisplay.style.display = ""; }
   if (resetEl) resetEl.style.display = "";
   fitCanvas();
   initGame();

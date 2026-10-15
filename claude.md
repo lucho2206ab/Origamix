@@ -305,7 +305,8 @@ Game over when penaltyCount >= 5.
 
 ## 🎨 Visual Style (never change)
 
-- Background: `#0d0d0d`
+- Page background remains dark; the gameplay canvas is transparent so only the board is visible.
+- Title screen background: `#0d0d0d`
 - Empty triangle: `#1e1e1e`
 - Grid diagonal lines: `rgba(255,255,255,0.08)`
 - UI text: `#e0e0e0`, font: `'Courier New'`

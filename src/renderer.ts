@@ -68,8 +68,6 @@ export function render(state: GameState) {
   const boardY = (canvas.height - rows * S) / 2;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#0d0d0d';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Draw grid cells (diagonals + halves)
   for (let r = 0; r < rows; r++) {

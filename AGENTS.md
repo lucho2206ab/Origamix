@@ -38,7 +38,7 @@
 
 ## Visual constants
 - Canvas: 760×650, cell size = 26px, board offset (20, 100)
-- Colors: bg `#0d0d0d`, empty tri `#1e1e1e`, gold accent `#c8960c`, text `#e0e0e0`, penalty glow `#ff3300`
+- Colors: dark page background, transparent gameplay canvas, empty tri `#1e1e1e`, gold accent `#c8960c`, text `#e0e0e0`, penalty glow `#ff3300`
 - Font: `'Courier New'` everywhere
 - Empty cells always render diagonal lines (`rgba(255,255,255,0.08)`)
 
